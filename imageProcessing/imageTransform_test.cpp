@@ -9,6 +9,21 @@
 #include "../source/functions.hpp"
 #include "imageFunctions.hpp"
 
+/**
+ * This demonstrates homomorphic operations being done
+ * on images. An input image is encrypted pixelwise and
+ * homomorphically. Then a homomorphic transformation 
+ * is done on it. In this case we convert the RGB values 
+ * of the pixels of the image to HSV (Hue, Saturation, Value).
+ * Then we rotate the hue by a constant amount, morphing
+ * the color of the image. The result is then decrypted
+ * and displayed next to the original.
+ *
+ * Due to the constraints of homomorphic computation the
+ * image is scaled down to be of size 100 by 100 pixels.
+ * Then we perform batch homomorphic computation on a 
+ * vector of pixels of size ~10,000.
+ */
 int main() {
   // Our image input
   cimg_library::CImg<unsigned char> img("../resources/test2.jpg");
