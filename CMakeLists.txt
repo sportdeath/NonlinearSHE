@@ -86,8 +86,10 @@ target_link_libraries(
 	${LIBS}
 )
 
-add_executable(image_test
-	       imageProcessing/test.cpp
+add_executable(imageTransform_test
+         imageProcessing/imageTransform_test.cpp
+         imageProcessing/imageFunctions.cpp
+         imageProcessing/imageFunctions.hpp
          source/numberTheory.hpp
          source/numberTheory.cpp
          source/yashe.cpp
@@ -99,6 +101,6 @@ add_executable(image_test
 )
 
 target_link_libraries(
-  image_test
+  imageTransform_test
 	${LIBS}
 )
