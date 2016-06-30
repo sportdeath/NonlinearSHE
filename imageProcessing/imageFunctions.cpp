@@ -12,9 +12,17 @@ void ImageFunctions::RGBToLong(long & output,
                const unsigned char& g,
                const cimg_library::CImg<unsigned char> & colorMap) {
 
-  double minDistance = 1000;
+  // This computes the minimum Euclidean
+  // distance from an RGB value to values
+  // in the colorMap
+  //
+  // The row on the colorMap whose distance
+  // from the input RGB values is returned
+
+  double minDistance = DBL_MAX;
   output = 0;
   for (long row = 0; row < colorMap.height(); row++) {
+    // Euclidean distance
     double distance = sqrt(
         pow((r - colorMap(0,row,0,0)), 2.0) +
         pow((g - colorMap(0,row,0,1)), 2.0) +
@@ -34,7 +42,6 @@ void ImageFunctions::longToRGB(const long & input,
                unsigned char & b, 
                unsigned char & g,
                const cimg_library::CImg<unsigned char> & colorMap) {
-
   r = colorMap(0,input,0,0);
   g = colorMap(0,input,0,1);
   b = colorMap(0,input,0,2);
@@ -79,6 +86,13 @@ void ImageFunctions::longsToImage(
 }
 
 
+/**
+ * The following code is blatantly plagiarized
+ * from Nan C. Schaller professor of Computer
+ * Science at The Rochester Institute of Technology.
+ *
+ * https://www.cs.rit.edu/~ncs/color/t_convert.html
+ */
 void ImageFunctions::RGBtoHSV(const unsigned char rInt,
               const unsigned char gInt,
               const unsigned char bInt,
@@ -86,6 +100,7 @@ void ImageFunctions::RGBtoHSV(const unsigned char rInt,
               double * s,
               double * v) {
 
+  // RGB are now in [0,1)
   double r, g, b;
   r = rInt/256.;
   b = bInt/256.;
@@ -120,6 +135,14 @@ void ImageFunctions::RGBtoHSV(const unsigned char rInt,
 }
 
 
+
+/**
+ * The following code is blatantly plagiarized
+ * from Nan C. Schaller professor of Computer
+ * Science at The Rochester Institute of Technology.
+ *
+ * https://www.cs.rit.edu/~ncs/color/t_convert.html
+ */
 void ImageFunctions::HSVtoRGB(unsigned char * rInt,
               unsigned char * gInt,
               unsigned char * bInt,
