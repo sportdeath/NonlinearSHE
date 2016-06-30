@@ -42,6 +42,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Cimg_CFLAGS}")
   #message(ERROR " CIMG not found!")
 #endif(NOT CIMG_FOUND)
 
+####################
+## Executables
+##################
+
 add_executable(yashe_test
 	       tests/yashe_test.cpp
          source/numberTheory.hpp
@@ -84,6 +88,14 @@ target_link_libraries(
 
 add_executable(image_test
 	       imageProcessing/test.cpp
+         source/numberTheory.hpp
+         source/numberTheory.cpp
+         source/yashe.cpp
+         source/yashe.hpp
+         source/cipherText.cpp
+         source/cipherText.hpp
+         source/functions.cpp
+         source/functions.hpp
 )
 
 target_link_libraries(

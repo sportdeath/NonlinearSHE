@@ -34,7 +34,7 @@ YASHE::YASHE(long pModulus_,
   {
     NTL::ZZ_pPush push(bigPModulus);
 
-    NTL::SFBerlekamp(factors, NTL::conv<NTL::ZZ_pX>(cycloModX), 1);
+    NTL::SFCanZass(factors, NTL::conv<NTL::ZZ_pX>(cycloModX), 1);
   }
 
   {

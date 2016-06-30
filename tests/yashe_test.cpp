@@ -583,11 +583,11 @@ bool testDivisionByConstant() {
 
 bool testBatchDivisionByConstant() {
   long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(1200);
+  NTL::ZZ q = NTL::GenPrime_ZZ(1600);
   //long d = 688;
   //long d = 22016; // 2^9*43 - 5376 irreducible factors
-  //long d = 66048; // 2^9*3*43 - 10752 irreducible factors
-  long d = 1376*2; // 2^5 * 43
+  long d = 66048; // 2^9*3*43 - 10752 irreducible factors
+  //long d = 1376*2; // 2^5 * 43
   NTL::ZZ w = NTL::power2_ZZ(300);
   YASHE SHE(t,q,d,8,w);
 
@@ -619,8 +619,13 @@ bool testBatchDivisionByConstant() {
   for (long i = 0; i < SHE.getNumFactors(); i++) {
     numerators[i] = rand() % t;
   }
+  start = clock();
 
   YASHE_CT ciphertext = SHE.encryptBatch(numerators);
+  end = clock();
+
+  std::cout << "encryption took: " 
+    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
 
   start = clock();
 
