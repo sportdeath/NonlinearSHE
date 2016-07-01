@@ -24,14 +24,14 @@
  * Then we perform batch homomorphic computation on a 
  * vector of pixels of size ~10,000.
  */
-int main(int argc, char ** argv[]) {
-  if (argc < 1) {
-    std::cout << "Please supply an image!" << std::endl;
-    return;
+int main(int argc, char * argv[]) {
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " ImageFile" << std::endl;
+    return 1;
   }
 
   // Our image input
-  cimg_library::CImg<unsigned char> img(argv[0]);
+  cimg_library::CImg<unsigned char> img(argv[1]);
 
   clock_t start, end;
 
