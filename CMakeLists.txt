@@ -33,14 +33,14 @@ if(NOT GMP_FOUND)
 endif(NOT GMP_FOUND)
 
 # CImg
-find_package(Cimg REQUIRED)
-include_directories(${Cimg_INCLUDE_DIRS})
-link_directories(${CImg_SYSTEM_LIBS_DIR})
-set(LIBS ${LIBS} ${CImg_SYSTEM_LIBS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Cimg_CFLAGS}")
-#if(NOT CIMG_FOUND)
-  #message(ERROR " CIMG not found!")
-#endif(NOT CIMG_FOUND)
+find_package(CIMG REQUIRED)
+include_directories(${CIMG_INCLUDE_DIRS})
+link_directories(${CIMG_SYSTEM_LIBS_DIR})
+set(LIBS ${LIBS} ${CIMG_SYSTEM_LIBS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CIMG_CFLAGS}")
+if(NOT CIMG_FOUND)
+  message(ERROR " CIMG not found!")
+endif(NOT CIMG_FOUND)
 
 ####################
 ## Executables
