@@ -141,34 +141,34 @@ bool testKeyGen() {
   return true;
 }
 
-bool testEncryptDecrypt() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(392);
-  long d = 16384;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
+//bool testEncryptDecrypt() {
+  //long t = 257;
+  //NTL::ZZ q = NTL::GenPrime_ZZ(392);
+  //long d = 16384;
+  //NTL::ZZ w = NTL::power2_ZZ(32);
+  //YASHE SHE(t,q,d,8,w);
 
-  NTL::ZZ_pX secretKey = SHE.keyGen();
+  //NTL::ZZ_pX secretKey = SHE.keyGen();
 
-  std::vector<long> message(SHE.getMaxDegree() + 1);
+  //std::vector<long> message(SHE.getMaxDegree() + 1);
 
-  srand(time(0));
+  //srand(time(0));
 
-  for (long i = 0; i <= SHE.getMaxDegree(); i++) {
-    message[i] = rand() % t;
-  }
+  //for (long i = 0; i <= SHE.getMaxDegree(); i++) {
+    //message[i] = rand() % t;
+  //}
 
-  YASHE_CT ciphertext = SHE.encrypt(message);
+  //YASHE_CT ciphertext = SHE.encrypt(message);
 
-  std::vector<long> decryption = SHE.decryptVec(ciphertext, secretKey);
+  //std::vector<long> decryption = SHE.decryptVec(ciphertext, secretKey);
 
-  bool isSame = true;
-  for (long i = 0; i <=SHE.getMaxDegree(); i++) {
-    isSame &= (message[i] == decryption[i]);
-  }
+  //bool isSame = true;
+  //for (long i = 0; i <=SHE.getMaxDegree(); i++) {
+    //isSame &= (message[i] == decryption[i]);
+  //}
 
-  return isSame;
-}
+  //return isSame;
+//}
 
 
 bool testEncryptDecryptBatch() {
@@ -209,15 +209,18 @@ bool testAddCiphertexts() {
 
   NTL::ZZ_pX secretKey = SHE.keyGen();
 
-  std::vector<long> message1(SHE.getMaxDegree() + 1);
-  std::vector<long> message2(SHE.getMaxDegree() + 1);
+  //std::vector<long> message1(SHE.getMaxDegree() + 1);
+  //std::vector<long> message2(SHE.getMaxDegree() + 1);
 
   srand(time(0));
 
-  for (long i = 0; i <= SHE.getMaxDegree(); i++) {
-    message1[i] = rand() % t;
-    message2[i] = rand() % t;
-  }
+  long message1 = rand() % t;
+  long message2 = rand() % t;
+
+  //for (long i = 0; i <= SHE.getMaxDegree(); i++) {
+    //message1[i] = rand() % t;
+    //message2[i] = rand() % t;
+  //}
 
   YASHE_CT ciphertext1 = SHE.encrypt(message1);
   YASHE_CT ciphertext2 = SHE.encrypt(message2);
@@ -230,13 +233,14 @@ bool testAddCiphertexts() {
 
   std::cout << "addition took " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
 
-  std::vector<long> decryption = SHE.decryptVec(ciphertext1, secretKey);
+  //std::vector<long> decryption = SHE.decryptVec(ciphertext1, secretKey);
+  long decryption = SHE.decrypt(ciphertext1, secretKey);
 
-  bool isSame = true;
-  for (long i = 0; i <=SHE.getMaxDegree(); i++) {
-    isSame &= ((message1[i] + message2[i]) % t == decryption[i]);
-  }
-  return isSame;
+  //bool isSame = true;
+  ////for (long i = 0; i <=SHE.getMaxDegree(); i++) {
+    //isSame &= ((message1[i] + message2[i]) % t == decryption[i]);
+  //}
+  return (message1 + message2) == decryption;
 }
 
 bool testMulCiphertexts() {

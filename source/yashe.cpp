@@ -14,7 +14,7 @@
 
 YASHE::YASHE(long pModulus_,
              NTL::ZZ cModulus_,
-             long cyclotomicDegree_,
+             long cyclotomicDegree,
              long stdDev_,
              NTL::ZZ radix_) {
   pModulus = pModulus_;
@@ -25,9 +25,8 @@ YASHE::YASHE(long pModulus_,
   modulusRatio = NTL::conv<NTL::ZZ_p>(cModulus/pModulus);
   bigModulus = (cModulus * cModulus)/pModulus;
 
-  cycloDegree = cyclotomicDegree_;
-  maxDegree = NumberTheory::eulerToitient(cycloDegree) - 1;
-  cycloModX = NumberTheory::cyclotomicPoly(cycloDegree);
+  maxDegree = NumberTheory::eulerToitient(cyclotomicDegree) - 1;
+  cycloModX = NumberTheory::cyclotomicPoly(cyclotomicDegree);
   cycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(cycloModX));
 
   {
@@ -169,7 +168,6 @@ void YASHE::dot(NTL::ZZ_pX& output,
     NTL::MulMod(product, a[i], b[i], cycloMod);
     output += product;
   }
-  // do this with fft rep instead...precompute the fftrep of the eval key. 
 }
 
 
@@ -230,26 +228,6 @@ void YASHE::roundMultiply(NTL::ZZ_pX& output,
 
     output[i] = NTL::conv<NTL::ZZ_p>(quotient);
   }
-
-  //NTL::ZZX bigA, bigB, product;
-  //NTL::conv(bigA, a);
-  //NTL::conv(bigB, b);
-  //product.SetLength(maxDegree + 1);
-  //NTL::MulMod(product, bigA, bigB, cycloModX);
-
-  //output.SetLength(maxDegree + 1);
-  //NTL::ZZ quotient, remainder;
-
-  //for (long i = 0; i <= maxDegree; i++) {
-    //DivRem(quotient, remainder, pModulus * product[i], cModulus);
-
-    //// Rounding using remainder
-    //if (remainder * 2 > cModulus) {
-      //quotient += 1;
-    //}
-
-    //output[i] = NTL::conv<NTL::ZZ_p>(quotient);
-  //}
 }
 
 
@@ -370,23 +348,6 @@ NTL::ZZ_pX YASHE::keyGen() {
  *
  * With s, e <- X_err
  */
-YASHE_CT YASHE::encrypt(std::vector<long> message) {
-  
-  NTL::ZZ_pX output;
-  output.SetLength(maxDegree + 1);
-
-  for (long i = 0; i < std::min(maxDegree + 1, long(message.size())); i++) {
-    output[i] = NTL::ZZ_p(message[i] % pModulus);
-  }
-
-  output *= modulusRatio;
-  output += randomErrPoly();
-  output += MulMod(randomErrPoly(), publicKey, cycloMod);
-
-  return YASHE_CT(output, this);
-}
-
-
 YASHE_CT YASHE::encryptBatch(std::vector<long> messages) {
   
   NTL::ZZ_pX smallOutput;
@@ -423,28 +384,12 @@ YASHE_CT YASHE::encrypt(long message) {
   return YASHE_CT(output, this);
 }
 
-
 /**
  * A cipher text is decrypted with the following
  * formula:
  *      
  *      m = round(t/q * ((f*c) mod q) ) mod t
  */
-std::vector<long> YASHE::decryptVec(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
-  
-  std::vector<long> output(maxDegree + 1);
-
-  NTL::ZZ_pX decryption;
-  roundDecryptVec(decryption, secretKey, ciphertext.getPoly());
-
-  for (long i = 0; i <= maxDegree; i++) {
-    output[i] = rem(rep(decryption[i]), pModulus);
-  }
-
-  return output;
-}
-
-
 long YASHE::decrypt(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
   
   NTL::ZZ decryption;
@@ -489,9 +434,3 @@ void YASHE::keySwitch(NTL::ZZ_pX& output, const NTL::ZZ_pX& input) {
   radixDecomp(decomp, input);
   dotEval(output, decomp);
 }
-
-// bootstrapping potentially - could be faster to bootstrap after poly
-// work out how to batch multiple things - for image encoding
-// other encodings
-
-
