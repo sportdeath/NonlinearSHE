@@ -124,28 +124,57 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
   // A vector of all of the powers of the input
   // from 1 to sqrtDegree
   std::vector<YASHE_CT> powers(sqrtDegree);
+  std::vector<long> depth(sqrtDegree);
   powers[0] = input;
+  depth[0] = 0;
   powers[0].generateMultiplier();
   for (long i = 1; i < sqrtDegree; i++) {
-    if ( i + 1 % 2 == 0) {
-      mul(powers[i], powers[(i + 1)/2 - 1], powers[(i + 1)/2 - 1]);
-    } else {
-      mul(powers[i], powers[i - 1], powers[0]);
+    long minimumDepth = sqrtDegree;
+    long secondaryDepth = sqrtDegree;
+    long minimumIndex = 0;
+    for (long j = 0; j < i/2 + 1; j++) {
+      long newDepth = std::max(depth[j],depth[i - j - 1]);
+      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
+      if (newDepth < minimumDepth) {
+        minimumDepth = newDepth;
+        minimumIndex = j;
+        secondaryDepth = newSecDepth;
+      } else if ( newDepth == minimumDepth) {
+        if (newSecDepth < secondaryDepth) {
+          minimumIndex = j;
+          secondaryDepth = newSecDepth;
+        }
+      }
     }
+    depth[i] = minimumDepth + 1;
+    mul(powers[i], powers[minimumIndex], powers[i - minimumIndex -1]);
   }
 
   // A vector of x^sqrtDegree, x^2sqrtDegree ... x^degree
   std::vector<YASHE_CT> powersOfPowers(sqrtDegree);
   powersOfPowers[0] = powers[sqrtDegree - 1];
+  depth[0] = 0;
   powersOfPowers[0].generateMultiplier();
   for (long i = 1; i < sqrtDegree; i++) {
-    if ( i + 1 % 2 == 0) {
-      mul(powersOfPowers[i], 
-          powersOfPowers[(i + 1)/2 - 1], 
-          powersOfPowers[(i + 1)/2 - 1]);
-    } else {
-      mul(powersOfPowers[i], powersOfPowers[i - 1], powersOfPowers[0]);
+    long minimumDepth = sqrtDegree;
+    long secondaryDepth = sqrtDegree;
+    long minimumIndex = 0;
+    for (long j = 0; j < i/2 + 1; j++) {
+      long newDepth = std::max(depth[j],depth[i - j - 1]);
+      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
+      if (newDepth < minimumDepth) {
+        minimumDepth = newDepth;
+        minimumIndex = j;
+        secondaryDepth = newSecDepth;
+      } else if ( newDepth == minimumDepth) {
+        if (newSecDepth < secondaryDepth) {
+          minimumIndex = j;
+          secondaryDepth = newSecDepth;
+        }
+      }
     }
+    depth[i] = minimumDepth + 1;
+    mul(powersOfPowers[i], powersOfPowers[minimumIndex], powersOfPowers[i - minimumIndex - 1]);
   }
 
   // The first chunk

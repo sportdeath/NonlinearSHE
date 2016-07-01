@@ -40,10 +40,10 @@ int main(int argc, char * argv[]) {
   // Generate parameters for the YASHE protocol
   // and create environment.
   long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(1600);
-  long d = 66048; // 2^9*3*43 - 1075 irreducible factors
+  NTL::ZZ q = NTL::GenPrime_ZZ(400);
+  long d = 22016; // 2^9*43 - 5376 factors
   long sigma = 8;
-  NTL::ZZ w = NTL::power2_ZZ(300);
+  NTL::ZZ w = NTL::power2_ZZ(70);
   YASHE SHE(t,q,d,sigma,w);
 
   end = clock();
@@ -51,6 +51,8 @@ int main(int argc, char * argv[]) {
             << double(end - start)/CLOCKS_PER_SEC
             << " seconds"
             << std::endl;
+
+  std::cout << SHE.getNumFactors() << " factors." << std::endl;
 
   // Resize the image so we can pack it into a single
   // cipher text
@@ -94,6 +96,7 @@ int main(int argc, char * argv[]) {
 
     // rotate hue by 30 degrees
     h = fmod(h - 75, 360);
+    //s = pow(s, 4.);
 
     ImageFunctions::HSVtoRGB(&r, &g, &b, h, s, v);
     ImageFunctions::RGBToLong(input, r, g, b, colorMap);
@@ -150,7 +153,7 @@ int main(int argc, char * argv[]) {
   ImageFunctions::longsToImage(decryption, outputImg, colorMap);
 
   // Display the input next to the output!
-  (img, outputImg).display("result!");
+  (img, outputImg).display("result!",false);
 
   return 0;
 }

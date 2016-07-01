@@ -37,6 +37,8 @@ FIND_LIBRARY(NTL_LIBRARY
   /opt
 )
 
+set(NTL_THREADS on)
+set(NTL_THREAD_BOOST on)
 
 # handle the QUIETLY and REQUIRED arguments and set NTL_FOUND to TRUE if
 # all listed variables are TRUE

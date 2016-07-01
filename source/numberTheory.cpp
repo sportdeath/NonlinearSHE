@@ -86,16 +86,17 @@ void NumberTheory::CRT(
 
   NTL::ZZ_pXModulus modulusM(modulus);
 
-
   NTL::ZZ_pX fInv, fInvInv;
 
   for (long i = 0; i < numFactors; i++) {
-    fInv = modulus/factors[i];
-
+    div(fInv, modulusM, factors[i]);
     rem(fInvInv, fInv, factors[i]);
     InvMod(fInvInv, fInvInv, factors[i]);
 
+    // These values here could be computed one time and stored
+    //         vvvvvvvvvvvvvvvvvvvvvvvv
     output += MulMod(fInv, fInvInv, modulusM) * inputs[i];
+    // Then you could just multiply by input and sum
   }
 
 }
