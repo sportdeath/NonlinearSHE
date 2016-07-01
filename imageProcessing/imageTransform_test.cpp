@@ -54,8 +54,9 @@ int main(int argc, char * argv[]) {
 
   // Resize the image so we can pack it into a single
   // cipher text
-  if (img.width() * img.height() < SHE.getNumFactors()) {
-    double scalingFactor = SHE.getNumFactors()/(img.width() * img.height());
+  if (img.width() * img.height() > SHE.getNumFactors()) {
+    double scalingFactor = SHE.getNumFactors()/double(img.width() * img.height());
+    scalingFactor = sqrt(scalingFactor);
     long newWidth = img.width() * scalingFactor;
     long newHeight = img.height() * scalingFactor;
     img.resize(newWidth,newHeight, 1, 3, 5);

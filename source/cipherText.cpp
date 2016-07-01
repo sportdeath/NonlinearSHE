@@ -32,6 +32,13 @@ NTL::ZZ_pX YASHE_CT::getPoly() {
 }
 
 
+void YASHE_CT::generateMultiplier() {
+  NTL::ZZ_pPush push(y -> getBigModulus());
+  multiplier = NTL::ZZ_pXMultiplier(poly, y -> getBigCycloMod());
+  this -> isMultiplier = true;
+}
+
+
 /**
  * Addition of plaintexts is addition of ciphertexts
  */
@@ -46,19 +53,14 @@ void YASHE_CT::sub(YASHE_CT& output, const YASHE_CT& a, const YASHE_CT& b) {
   output.isMultiplier = false;
 }
 
-void YASHE_CT::generateMultiplier() {
-  NTL::ZZ_pPush push(y -> getBigModulus());
-  multiplier = NTL::ZZ_pXMultiplier(poly, y -> getBigCycloMod());
-  this -> isMultiplier = true;
-}
-
-
 
 /**
  * In order to multiply ciphertexts, we perform multiplication
  * with rounding and then a key switching procedure.
  */
 void YASHE_CT::mul(YASHE_CT& output, const YASHE_CT& a, const YASHE_CT& b) {
+  // If the multiplier exists, performing multiplication
+  // is much faster.
   if (a.isMultiplier) {
     a.y -> roundMultiply(output.poly, b.poly, a.multiplier);
   } else if (b.isMultiplier) {
@@ -101,8 +103,11 @@ void YASHE_CT::add(YASHE_CT& output, const long& a, const YASHE_CT& b) {
 
 
 /**
- * Evaluated using method by Paterson and Stockmeyer.
- * Greatly reduced number of multiplications nessesary.
+ * Polynomials are evaluated using method by Paterson
+ * and Stockmeyer from the 1973 paper "On the number of
+ * multiplications necessary to evaluate polynomials".
+ * O(sqrt(d)) ciphertext multiplications must be made
+ * with a depth of O(log(d)) where d is the degree.
  */
 void YASHE_CT::evalPoly(YASHE_CT& output,
                         YASHE_CT& input,
@@ -143,7 +148,7 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
     }
   }
 
-  // Chunk 0 
+  // The first chunk
   output = YASHE_CT(poly[0], y);
   YASHE_CT product;
   for (long i = 0; i < std::min(sqrtDegree - 1, long(poly.size()) - 1); i++) {
@@ -156,6 +161,7 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
     maxChunk -= 1;
   }
 
+  // The other chunks
   for (long chunk = 0; chunk < maxChunk; chunk++) {
     YASHE_CT subTotal(poly[(chunk + 1) * sqrtDegree], y);
     for (long i = 0; 
@@ -169,12 +175,26 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
   }
 }
 
+/**
+ * Division is computed by taking note of the following equality
+ *
+ *         a/b = 2^(log2(a) - log2(b))
+ *
+ * This transforms the division problem, which is a function of
+ * two variables, into a linear combination of functions of
+ * single variables - significantly reducing the computation
+ * time for homomorphic operations. Exponentiation and logarithms
+ * are just as hard as evaluating any other nonlinear function
+ * of a single variable. Because the number of floating bits
+ * is limited, the reduction is approximate.
+ */
 void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
-  // computes the log base 2 of the input.
-  // Only need log_2log_2 p integer bits
-  // log_2 p - log_2log_2 p - 1 floating bits
-  // 1 bit which will become high if the input is less than the output
-
+  // When we compute the log of an input, we will
+  // need no more than log2(log2(p)) bits for integers
+  // 1 bit will be used to determine the denominator is
+  // greater than the numerator (preventing the exponent from
+  // wrapping modulo p). The rest - log2(p) - log2(log2(p)) - 1
+  // bits are for floating point operations. 
   long t = a.y -> getPModulus();
   double base = 2.02;
 

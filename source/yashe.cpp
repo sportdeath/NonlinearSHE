@@ -21,7 +21,6 @@ YASHE::YASHE(long pModulus_,
   cModulus = cModulus_;
   bigPModulus = NTL::ZZ(pModulus);
 
-
   NTL::ZZ_p::init(cModulus);
   modulusRatio = NTL::conv<NTL::ZZ_p>(cModulus/pModulus);
   bigModulus = (cModulus * cModulus)/pModulus;
@@ -34,7 +33,7 @@ YASHE::YASHE(long pModulus_,
   {
     NTL::ZZ_pPush push(bigPModulus);
 
-    NTL::SFCanZass(factors, NTL::conv<NTL::ZZ_pX>(cycloModX), 1);
+    NTL::SFCanZass(factors, NTL::conv<NTL::ZZ_pX>(cycloModX));
   }
 
   {
