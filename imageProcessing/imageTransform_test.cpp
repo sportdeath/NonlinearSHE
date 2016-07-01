@@ -24,9 +24,14 @@
  * Then we perform batch homomorphic computation on a 
  * vector of pixels of size ~10,000.
  */
-int main() {
+int main(int argc, char ** argv[]) {
+  if (argc < 1) {
+    std::cout << "Please supply an image!" << std::endl;
+    return;
+  }
+
   // Our image input
-  cimg_library::CImg<unsigned char> img("../resources/test2.jpg");
+  cimg_library::CImg<unsigned char> img(argv[0]);
 
   clock_t start, end;
 
@@ -49,8 +54,12 @@ int main() {
 
   // Resize the image so we can pack it into a single
   // cipher text
-  long imgDim = sqrt(SHE.getNumFactors());
-  img.resize(imgDim,imgDim, 1, 3, 5);
+  if (img.width() * img.height() < SHE.getNumFactors()) {
+    double scalingFactor = SHE.getNumFactors()/(img.width() * img.height());
+    long newWidth = img.width() * scalingFactor;
+    long newHeight = img.height() * scalingFactor;
+    img.resize(newWidth,newHeight, 1, 3, 5);
+  }
 
   // Define a color space of 256 colors
   cimg_library::CImg<unsigned char> colorMap =
@@ -61,6 +70,12 @@ int main() {
   // by the color mapping above. 
   std::vector<long> message;
   ImageFunctions::imageToLongs(message, img, colorMap);
+
+  // In order for the output to reflect the
+  // input we change img to be exactly the
+  // image we are encrypting - quantized
+  // to 256 colors.
+  ImageFunctions::longsToImage(message, img, colorMap);
 
   // Resize the message so that it fills the entire
   // message space (the end of it will be junk)
@@ -77,7 +92,7 @@ int main() {
     ImageFunctions::RGBtoHSV(r, g, b, &h, &s, &v);
 
     // rotate hue by 30 degrees
-    h = fmod(h + 30, 360);
+    h = fmod(h - 75, 360);
 
     ImageFunctions::HSVtoRGB(&r, &g, &b, h, s, v);
     ImageFunctions::RGBToLong(input, r, g, b, colorMap);
@@ -130,7 +145,7 @@ int main() {
             << std::endl;
 
   // turn the message back into an image
-  cimg_library::CImg<unsigned char> outputImg(imgDim, imgDim, 1, 3);
+  cimg_library::CImg<unsigned char> outputImg(img.width(), img.height(), 1, 3);
   ImageFunctions::longsToImage(decryption, outputImg, colorMap);
 
   // Display the input next to the output!

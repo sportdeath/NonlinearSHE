@@ -27,6 +27,15 @@ long NumberTheory::eulerToitient(long n) {
   return output;
 }
 
+/**
+ * We compute the nth cyclotomic polynomial
+ * by using the following recursive equation:
+ *
+ *                         x^n - 1
+ *  Phi_n(x) = -------------------------------
+ *             Product[Phi_d(x) | d divides n]
+ *
+ */
 NTL::ZZX NumberTheory::cyclotomicPoly(long n) {
 
   // x^n -1
@@ -47,6 +56,25 @@ NTL::ZZX NumberTheory::cyclotomicPoly(long n) {
   }
 }
 
+
+/**
+ * We compute the Chinese Remainder theorem
+ * by using the equation given in the existence
+ * proof:
+ *  
+ *  Let output = x, 
+ *      inputs[i] = a_i,
+ *      factors[i] = n_i, 
+ *      modulus = N
+ *      
+ *  if x = a_i mod n_i for all i
+ *  and N = Product[n_i, for all i]
+ *  then
+ *
+ *          [       N    ( ( ( N )^-1)         )]
+ *   x = Sum[a_i * --- * ( ( (---)   ) mod n_i )]
+ *          [      n_i   ( ( (n_i)   )         )]
+ */
 void NumberTheory::CRT(
         NTL::ZZ_pX& output,
         const std::vector<long>& inputs,
