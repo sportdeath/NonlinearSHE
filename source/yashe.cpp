@@ -30,13 +30,15 @@ YASHE::YASHE(long pModulus_,
   cycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(cycloModX));
 
   {
-    NTL::ZZ_pPush push(bigPModulus);
-
+    NTL::ZZ_pPush push(bigPModulus); // switch to plain text modulus
+    // Factor the cyclotomic polynomial modulo t
+    // for batch encryption
     NTL::SFCanZass(factors, NTL::conv<NTL::ZZ_pX>(cycloModX));
   }
 
   {
-    NTL::ZZ_pPush push(bigModulus);
+    NTL::ZZ_pPush push(bigModulus); // switch to multiplication modulus
+    // make another modulus for fast multiplication
     bigCycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(cycloModX));
   }
 
@@ -348,19 +350,12 @@ NTL::ZZ_pX YASHE::keyGen() {
  *
  * With s, e <- X_err
  */
-YASHE_CT YASHE::encryptBatch(std::vector<long> messages) {
+YASHE_CT YASHE::encrypt(long message) {
   
-  NTL::ZZ_pX smallOutput;
+  NTL::ZZ_pX output;
+  output.SetLength(maxDegree + 1);
 
-
-  {
-    NTL::ZZ_pPush push(bigPModulus);
-
-    NumberTheory::CRT(smallOutput, messages, NTL::conv<NTL::ZZ_pX>(cycloModX), factors);
-
-  }
-
-  NTL::ZZ_pX output = NTL::conv<NTL::ZZ_pX>(NTL::conv<NTL::ZZX>(smallOutput));
+  output[0] = NTL::ZZ_p(message % pModulus);
 
   output *= modulusRatio;
   output += randomErrPoly();
@@ -368,14 +363,20 @@ YASHE_CT YASHE::encryptBatch(std::vector<long> messages) {
 
   return YASHE_CT(output, this);
 }
-
-
-YASHE_CT YASHE::encrypt(long message) {
+YASHE_CT YASHE::encryptBatch(std::vector<long> messages) {
   
-  NTL::ZZ_pX output;
-  output.SetLength(maxDegree + 1);
+  NTL::ZZ_pX smallOutput;
 
-  output[0] = NTL::ZZ_p(message % pModulus);
+
+  // Use the chinese remainder theorem to
+  // encode the vector of messages into a
+  // single polynomial.
+  {
+    NTL::ZZ_pPush push(bigPModulus);
+    NumberTheory::CRT(smallOutput, messages, NTL::conv<NTL::ZZ_pX>(cycloModX), factors);
+  }
+
+  NTL::ZZ_pX output = NTL::conv<NTL::ZZ_pX>(NTL::conv<NTL::ZZX>(smallOutput));
 
   output *= modulusRatio;
   output += randomErrPoly();
@@ -397,8 +398,6 @@ long YASHE::decrypt(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
 
   return rem(decryption, pModulus);
 }
-
-
 std::vector<long> YASHE::decryptBatch(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
 
   std::vector<long> output(factors.length());
@@ -413,6 +412,8 @@ std::vector<long> YASHE::decryptBatch(YASHE_CT ciphertext, NTL::ZZ_pX secretKey)
 
     smallDecryption = NTL::conv<NTL::ZZ_pX>(decryption);
 
+    // Undo the encoding of the chinese remainder theorem
+    // to get each result out
     NTL::ZZ_pX remainder;
     for (long i = 0; i < factors.length(); i++) {
       rem(remainder, smallDecryption, factors[i]);
