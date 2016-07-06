@@ -75,13 +75,14 @@ bool testCRT() {
   NTL::ZZX cyclo = NumberTheory::cyclotomicPoly(16);
   NTL::ZZ_pX cycloMod = NTL::conv<NTL::ZZ_pX>(cyclo);
 
-  NTL::vec_ZZ_pX factors = NTL::SFBerlekamp(cycloMod);
+  NTL::vec_ZZ_pX factors_ = NTL::SFBerlekamp(cycloMod);
 
-  long numFactors = factors.length();
-
+  long numFactors = factors_.length();
+  std::vector<NTL::ZZ_pX> factors(numFactors);
   std::vector<long> inputs(numFactors);
   for (long i = 0; i < numFactors; i++) {
     inputs[i] = rand() % q;
+    factors[i] = factors_[i];
   }
 
   

@@ -587,13 +587,16 @@ bool testDivisionByConstant() {
 
 bool testBatchDivisionByConstant() {
   long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(400);
-  //long d = 688;
-  long d = 22016; // 2^9*43 - 5376 irreducible factors
-  //long d = 66048; // 2^9*3*43 - 10752 irreducible factors
-  //long d = 1376*2; // 2^5 * 43
-  NTL::ZZ w = NTL::power2_ZZ(70);
-  YASHE SHE(t,q,d,8,w);
+  //NTL::ZZ q = NTL::GenPrime_ZZ(400);
+  ////long d = 688;
+  //long d = 22016; // 2^9*43 - 5376 irreducible factors
+  ////long d = 66048; // 2^9*3*43 - 10752 irreducible factors
+  ////long d = 1376*2; // 2^5 * 43
+  //NTL::ZZ w = NTL::power2_ZZ(70);
+  //YASHE SHE(t,q,d,8,w);
+  //SHE.writeToFile("8BitFHE");
+  YASHE SHE = YASHE::readFromFile("/Users/tfh/Dropbox (MIT)/Work/Orange/YASHE/build/8BitFHE");
+
 
   std::cout << "batch size: " << SHE.getNumFactors() << std::endl;
 
@@ -717,6 +720,10 @@ bool testDivision() {
   return true;
 }
 
+void testReadWrite() {
+  YASHE SHE = YASHE::readFromFile("8BitFHE");
+  NTL::ZZ_pX sk = SHE.keyGen();
+}
 
 
 int main() {
@@ -801,6 +808,8 @@ int main() {
   } else {
     std::cout << "Passed: batch division by constant!" << std::endl;
   }
+
+  testReadWrite();
   
   //testDivision();
 

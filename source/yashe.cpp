@@ -1,6 +1,7 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <fstream>
 
 #include <NTL/ZZ.h>
 #include <NTL/ZZX.h>
@@ -8,9 +9,26 @@
 #include <NTL/ZZ_pX.h>
 #include <NTL/ZZ_pXFactoring.h>
 
+#include<boost/archive/text_oarchive.hpp>
+#include<boost/archive/text_iarchive.hpp>
+#include<boost/serialization/utility.hpp>
+#include<boost/serialization/vector.hpp>
+
+#include "../serialization/ZZ.hpp"
+#include "../serialization/ZZX.hpp"
+#include "../serialization/ZZ_p.hpp"
+#include "../serialization/ZZ_pX.hpp"
+#include "../serialization/ZZ_pXModulus.hpp"
+#include "../serialization/FFTRep.hpp"
+
 #include "yashe.hpp"
 #include "cipherText.hpp"
 #include "numberTheory.hpp"
+
+YASHE::YASHE() {
+  randGen = std::mt19937(time(0));
+}
+
 
 YASHE::YASHE(long pModulus_,
              NTL::ZZ cModulus_,
@@ -33,7 +51,25 @@ YASHE::YASHE(long pModulus_,
     NTL::ZZ_pPush push(bigPModulus); // switch to plain text modulus
     // Factor the cyclotomic polynomial modulo t
     // for batch encryption
-    NTL::SFCanZass(factors, NTL::conv<NTL::ZZ_pX>(cycloModX));
+    NTL::ZZ_pXModulus pModulusX;
+    NTL::build(pModulusX, NTL::conv<NTL::ZZ_pX>(cycloModX));
+    NTL::vec_ZZ_pX factors_;
+    NTL::SFCanZass(factors_, pModulusX , 1);
+    factors.resize(factors_.length());
+    for (long i = 0; i < factors_.length(); i++) {
+      factors[i] = factors_[i];
+    }
+
+    //NTL::ZZ_pX fInv, fInvInv;
+    //crtElements.resize(factors.size());
+
+    //for (long i = 0; i < factors.size(); i++) {
+      //div(fInv, pModulusX, factors[i]);
+      //rem(fInvInv, fInv, factors[i]);
+      //InvMod(fInvInv, fInvInv, factors[i]);
+
+      //crtElements[i] = MulMod(fInv, fInvInv, pModulusX);
+    //}
   }
 
   {
@@ -47,6 +83,29 @@ YASHE::YASHE(long pModulus_,
   decompSize = log(cModulus)/log(radix) + 1; // log_w(q) + 1
 
   randGen = std::mt19937(time(0));
+
+}
+
+
+void YASHE::writeToFile(std::string filename) {
+  std::ofstream ofs(filename);
+  boost::archive::text_oarchive oa(ofs);
+  oa << *this;
+}
+
+YASHE YASHE::readFromFile(std::string filename) {
+  YASHE output;
+  std::ifstream ifs(filename);
+  boost::archive::text_iarchive ia(ifs);
+  ia >> output;
+  NTL::ZZ_p::init(output.cModulus);
+  output.cycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(output.cycloModX));
+  {
+    NTL::ZZ_pPush push(output.bigModulus); // switch to multiplication modulus
+    // make another modulus for fast multiplication
+    output.bigCycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(output.cycloModX));
+  }
+  return output;
 }
 
 
@@ -56,7 +115,7 @@ long YASHE::getPModulus() {
 
 
 long YASHE::getNumFactors() {
-  return factors.length();
+  return factors.size();
 }
 
 
@@ -400,7 +459,7 @@ long YASHE::decrypt(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
 }
 std::vector<long> YASHE::decryptBatch(YASHE_CT ciphertext, NTL::ZZ_pX secretKey) {
 
-  std::vector<long> output(factors.length());
+  std::vector<long> output(factors.size());
   
   NTL::ZZ_pX decryption;
   roundDecryptVec(decryption, secretKey, ciphertext.getPoly());
@@ -415,7 +474,7 @@ std::vector<long> YASHE::decryptBatch(YASHE_CT ciphertext, NTL::ZZ_pX secretKey)
     // Undo the encoding of the chinese remainder theorem
     // to get each result out
     NTL::ZZ_pX remainder;
-    for (long i = 0; i < factors.length(); i++) {
+    for (long i = 0; i < factors.size(); i++) {
       rem(remainder, smallDecryption, factors[i]);
       output[i] = rem(rep(remainder[0]), pModulus);
     }

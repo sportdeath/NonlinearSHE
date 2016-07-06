@@ -9,6 +9,13 @@
 #include "../source/functions.hpp"
 #include "imageFunctions.hpp"
 
+
+std::function<long(long)> multiplyByConstant(double c) {
+  return [c] (long input) {
+    return c * input;
+  };
+};
+
 /**
  * This demonstrates homomorphic operations being done
  * on images. An input image is encrypted pixelwise and
@@ -25,6 +32,7 @@
  * vector of pixels of size ~10,000.
  */
 int main(int argc, char * argv[]) {
+
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " ImageFile" << std::endl;
     return 1;
@@ -40,12 +48,6 @@ int main(int argc, char * argv[]) {
   // Generate parameters for the YASHE protocol
   // and create environment.
   YASHE SHE = YASHE::readFromFile("8BitFHE");
-  //long t = 257;
-  //NTL::ZZ q = NTL::GenPrime_ZZ(400);
-  //long d = 22016; // 2^9*43 - 5376 factors
-  //long sigma = 8;
-  //NTL::ZZ w = NTL::power2_ZZ(70);
-  //YASHE SHE(t,q,d,sigma,w);
 
   end = clock();
   std::cout << "Reading parameters completed in "
@@ -65,48 +67,30 @@ int main(int argc, char * argv[]) {
     img.resize(newWidth,newHeight, 1, 3, 5);
   }
 
-  // Define a color space of 256 colors
-  cimg_library::CImg<unsigned char> colorMap =
-    cimg_library::CImg<unsigned char>::default_LUT256();
-
   // Convert the image into a list of integers
   // each integer represents a pixel defined
   // by the color mapping above. 
-  std::vector<long> message;
-  ImageFunctions::imageToLongs(message, img, colorMap);
+  std::vector<long> R(SHE.getNumFactors()), G(SHE.getNumFactors()), B(SHE.getNumFactors());
+  for (long r = 0; r < img.height(); r++) {
+    for (long c = 0; c < img.width(); c++) {
+      long index = c + r * img.width();
+      R[index] = img(c,r,0,0);
+      G[index] = img(c,r,0,1);
+      B[index] = img(c,r,0,2);
+    }
+  }
 
-  // In order for the output to reflect the
-  // input we change img to be exactly the
-  // image we are encrypting - quantized
-  // to 256 colors.
-  ImageFunctions::longsToImage(message, img, colorMap);
-
-  // Resize the message so that it fills the entire
-  // message space (the end of it will be junk)
-  message.resize(SHE.getNumFactors());
-
-  // Define a function on pixels.
-  // This function takes a pixel value (0 - 255)
-  // and returns another pixel value representing
-  // the inversion of that pixel value.
-  std::function<long(long)> invertColors = [colorMap](long input) {
-    unsigned char r, g, b;
-    double h, s, v;
-    ImageFunctions::longToRGB(input, r, g, b, colorMap);
-    ImageFunctions::RGBtoHSV(r, g, b, &h, &s, &v);
-
-    // rotate hue by 30 degrees
-    h = fmod(h - 75, 360);
-    //s = pow(s, 4.);
-
-    ImageFunctions::HSVtoRGB(&r, &g, &b, h, s, v);
-    ImageFunctions::RGBToLong(input, r, g, b, colorMap);
-
-    return input;
-  };
   // The function is converted into
   // a polynomial of degree t = 257
-  std::vector<long> poly = Functions::functionToPoly(invertColors, 257);
+  std::vector<long> YR = Functions::functionToPoly(multiplyByConstant(0.299), 257);
+  std::vector<long> YG = Functions::functionToPoly(multiplyByConstant(0.587), 257);
+  std::vector<long> YB = Functions::functionToPoly(multiplyByConstant(0.114), 257);
+  std::vector<long> CbR = Functions::functionToPoly(multiplyByConstant(-0.169), 257);
+  std::vector<long> CbG = Functions::functionToPoly(multiplyByConstant(-0.331), 257);
+  std::vector<long> CbB = Functions::functionToPoly(multiplyByConstant(0.500), 257);
+  std::vector<long> CrR = Functions::functionToPoly(multiplyByConstant(0.500), 257);
+  std::vector<long> CrG = Functions::functionToPoly(multiplyByConstant(-0.419), 257);
+  std::vector<long> CrB = Functions::functionToPoly(multiplyByConstant(-0.081), 257);
 
   start = clock();
 
@@ -121,7 +105,9 @@ int main(int argc, char * argv[]) {
   start = clock();
 
   // encrypt the message
-  YASHE_CT ciphertext = SHE.encryptBatch(message);
+  YASHE_CT cR = SHE.encryptBatch(R);
+  YASHE_CT cG = SHE.encryptBatch(G);
+  YASHE_CT cB = SHE.encryptBatch(B);
 
   end = clock();
   std::cout << "Encryption completed in "
@@ -131,7 +117,16 @@ int main(int argc, char * argv[]) {
   start = clock();
 
   // evaluate the polynomial
-  YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
+  YASHE_CT cYR, cYG, cYB, cCbR, cCbG, cCbB, cCrR, cCrG, cCrB;
+  YASHE_CT::evalPoly(cYR, cR, YR);
+  YASHE_CT::evalPoly(cYG, cG, YG);
+  YASHE_CT::evalPoly(cYB, cB, YB);
+  YASHE_CT::evalPoly(cCbR, cR, CbR);
+  YASHE_CT::evalPoly(cCbG, cG, CbG);
+  YASHE_CT::evalPoly(cCbB, cB, CbB);
+  YASHE_CT::evalPoly(cCrR, cR, CrR);
+  YASHE_CT::evalPoly(cCrG, cG, CrG);
+  YASHE_CT::evalPoly(cCrB, cB, CrB);
 
   end = clock();
   std::cout << "Polynomial evaluation completed in "
@@ -140,8 +135,29 @@ int main(int argc, char * argv[]) {
             << std::endl;
   start = clock();
 
+  YASHE_CT cY, cCb, cCr;
+  YASHE_CT::add(cY, cYR, cYG);
+  YASHE_CT::add(cY, cY, cYB);
+
+  YASHE_CT::add(cCb, cCbR, cCbG);
+  YASHE_CT::add(cCb, cCb, cCbB);
+  YASHE_CT::add(cCb, cCb, 128);
+
+  YASHE_CT::add(cCr, cCrR, cCrG);
+  YASHE_CT::add(cCr, cCr, cCrB);
+  YASHE_CT::add(cCr, cCr, 128);
+
+  end = clock();
+  std::cout << "Addition completed in "
+            << double(end - start)/CLOCKS_PER_SEC
+            << " seconds"
+            << std::endl;
+  start = clock();
+
   // decrypt the message
-  std::vector<long> decryption = SHE.decryptBatch(ciphertext, secretKey);
+  std::vector<long> Y = SHE.decryptBatch(cY, secretKey);
+  std::vector<long> Cb = SHE.decryptBatch(cCb, secretKey);
+  std::vector<long> Cr = SHE.decryptBatch(cCr, secretKey);
 
   end = clock();
   std::cout << "Decryption completed in "
@@ -150,11 +166,29 @@ int main(int argc, char * argv[]) {
             << std::endl;
 
   // turn the message back into an image
-  cimg_library::CImg<unsigned char> outputImg(img.width(), img.height(), 1, 3);
-  ImageFunctions::longsToImage(decryption, outputImg, colorMap);
+  cimg_library::CImg<unsigned char> 
+    YImg,
+    CbImg,
+    CrImg,
+    outputImg(img.width(), img.height(), 1, 3);
+  YImg.fill(255,255,255);
+  CbImg.fill(255,255,255);
+  CrImg.fill(255,255,255);
+  for (long r = 0; r < img.height(); r++) {
+    for (long c = 0; c < img.width(); c++) {
+      long index = c + r * img.width();
+      outputImg(c,r,0,0) = Y[index];
+      outputImg(c,r,0,1) = Cb[index];
+      outputImg(c,r,0,2) = Cr[index];
+    }
+  }
+  YImg = outputImg.get_channel(0);
+  CbImg = outputImg.get_channel(1);
+  CrImg = outputImg.get_channel(2);
+  outputImg.YCbCrtoRGB();
 
   // Display the input next to the output!
-  (img, outputImg).display("result!",false);
+  (img,YImg,CbImg,CrImg,outputImg).display("result!",false);
 
   return 0;
 }

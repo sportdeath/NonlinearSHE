@@ -8,10 +8,31 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
 class YASHE_CT;
 
 class YASHE {
   private:
+    // Some stuff to write YASHE to file
+    // using boost serialization.
+    friend class boost::serialization::access;
+    template<class Archive>
+      void serialize(Archive & ar, const unsigned int version) {
+        ar & pModulus;
+        ar & bigPModulus;
+        ar & cModulus;
+        NTL::ZZ_p::init(cModulus);
+        ar & bigModulus;
+        ar & modulusRatio;
+        ar & cycloModX;
+        ar & maxDegree;
+        ar & factors;
+        ar & radix;
+        ar & decompSize;
+      }
+
     // The plain text modulus t
     long pModulus;
     // The plain text modulus t
@@ -40,7 +61,7 @@ class YASHE {
     long maxDegree;
 
     // The factors of the dth cyclotomic polynomial
-    NTL::vec_ZZ_pX factors;
+    std::vector<NTL::ZZ_pX> factors;
 
     // The radix w used to compute powers of Radix
     // or Radix decomp
@@ -48,8 +69,9 @@ class YASHE {
     // The size of decompositions, l_w,q = log_w(q) + 1
     long decompSize;
 
-    // The standard deviation for Gaussian distribution,
-    // sigma
+
+    // The standard deviation of the Gaussian
+    // random variable, sigma.
     long stdDev;
     // A random number generator
     std::mt19937 randGen;
@@ -60,6 +82,7 @@ class YASHE {
     // to perform fast multiplication.
     std::vector<NTL::ZZ_pXMultiplier> evalKeyMult;
 
+    std::vector<NTL::ZZ_pX> crtElements;
   public:
     /**
      * A constructor for the YASHE class
@@ -89,6 +112,22 @@ class YASHE {
           long stdDev_,      // Standard deviation of the gaussian distribution
           NTL::ZZ radix_        // base of decomposition
         );
+
+    YASHE();
+
+    /**
+     * A constructor that reads the class
+     * from a file. This means a class can be
+     * reused without having to regenerate
+     * factors or primes.
+     * The random number generator is reseeded.
+     */
+    static YASHE readFromFile(std::string filename);
+
+    /**
+     * Writes a class to a file.
+     */
+    void writeToFile(std::string filename);
 
     /**
      * A variety of public functions

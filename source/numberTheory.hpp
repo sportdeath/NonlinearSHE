@@ -54,7 +54,13 @@ class NumberTheory {
         NTL::ZZ_pX& output,
         const std::vector<long>& inputs,
         const NTL::ZZ_pX& modulus,
-        const NTL::vec_ZZ_pX& factors);
+        const std::vector<NTL::ZZ_pX> & factors);
+
+    static void CRTwithElements(
+        NTL::ZZ_pX& output,
+        const std::vector<long>& inputs,
+        const NTL::ZZ_pX& modulus,
+        const std::vector<NTL::ZZ_pX> & crtElements);
 };
 
 #endif

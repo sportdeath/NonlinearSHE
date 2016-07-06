@@ -79,16 +79,18 @@ void NumberTheory::CRT(
         NTL::ZZ_pX& output,
         const std::vector<long>& inputs,
         const NTL::ZZ_pX& modulus,
-        const NTL::vec_ZZ_pX& factors) {
+        const std::vector<NTL::ZZ_pX>& factors) {
 
-  long numFactors = factors.length();
+  long numFactors = factors.size();
   output = NTL::ZZ_pX::zero();
 
   NTL::ZZ_pXModulus modulusM(modulus);
+  //NTL::ZZ_pXModulus factorMod;
 
   NTL::ZZ_pX fInv, fInvInv;
 
   for (long i = 0; i < numFactors; i++) {
+    //build(factorMod, factors[i]);
     div(fInv, modulusM, factors[i]);
     rem(fInvInv, fInv, factors[i]);
     InvMod(fInvInv, fInvInv, factors[i]);
@@ -97,6 +99,20 @@ void NumberTheory::CRT(
     //         vvvvvvvvvvvvvvvvvvvvvvvv
     output += MulMod(fInv, fInvInv, modulusM) * inputs[i];
     // Then you could just multiply by input and sum
+  }
+
+}
+
+void NumberTheory::CRTwithElements(
+        NTL::ZZ_pX& output,
+        const std::vector<long>& inputs,
+        const NTL::ZZ_pX& modulus,
+        const std::vector<NTL::ZZ_pX>& crtElements) {
+
+  output = NTL::ZZ_pX::zero();
+
+  for (long i = 0; i < crtElements.size(); i++) {
+    output += crtElements[i] * inputs[i];
   }
 
 }
