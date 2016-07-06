@@ -7,8 +7,10 @@ This library relies on the number theoretic library [NTL](http://www.shoup.net/n
 # Installation
 Most common:
 
-cd <directory of YASHE>
+```bash
+cd (directory of YASHE)
 mkdir build
 cd build
 cmake ../
 make
+```
