@@ -56,8 +56,31 @@ endif(NOT Boost_FOUND)
 ## Executables
 ##################
 
+add_executable(numberTheory_test
+         unitTests/numberTheory_test.cpp
+         source/numberTheory.cpp
+         source/numberTheory.hpp
+)
+
+
+target_link_libraries(
+  numberTheory_test
+	${LIBS}
+)
+
+add_executable(functions_test
+         unitTests/functions_test.cpp
+         source/functions.cpp
+         source/functions.hpp
+)
+
+target_link_libraries(
+  functions_test
+	${LIBS}
+)
+
 add_executable(yashe_test
-	       tests/yashe_test.cpp
+	       unitTests/yashe_test.cpp
          source/numberTheory.hpp
          source/numberTheory.cpp
          source/yashe.cpp
@@ -75,73 +98,4 @@ add_executable(yashe_test
 target_link_libraries(
   yashe_test
 	${LIBS}
-)
-
-add_executable(numberTheory_test
-	       tests/numberTheory_test.cpp
-         source/numberTheory.cpp
-         source/numberTheory.hpp
-)
-
-
-target_link_libraries(
-  numberTheory_test
-	${LIBS}
-)
-
-add_executable(functions_test
-	       tests/functions_test.cpp
-         source/functions.cpp
-         source/functions.hpp
-)
-
-target_link_libraries(
-  functions_test
-	${LIBS}
-)
-
-add_executable(imageTransform_test
-         imageProcessing/imageTransform_test.cpp
-         imageProcessing/imageFunctions.cpp
-         imageProcessing/imageFunctions.hpp
-         source/numberTheory.hpp
-         source/numberTheory.cpp
-         source/yashe.cpp
-         source/yashe.hpp
-         source/cipherText.cpp
-         source/cipherText.hpp
-         source/functions.cpp
-         source/functions.hpp
-         serialization/ZZ.hpp
-         serialization/ZZ_p.hpp
-         serialization/ZZX.hpp
-         serialization/ZZ_pX.hpp
-)
-
-target_link_libraries(
-  imageTransform_test
-  ${LIBS}
-)
-
-add_executable(RGBtoYCbCr_test
-  imageProcessing/RGBtoYCbCr_test.cpp
-         imageProcessing/imageFunctions.cpp
-         imageProcessing/imageFunctions.hpp
-         source/numberTheory.hpp
-         source/numberTheory.cpp
-         source/yashe.cpp
-         source/yashe.hpp
-         source/cipherText.cpp
-         source/cipherText.hpp
-         source/functions.cpp
-         source/functions.hpp
-         serialization/ZZ.hpp
-         serialization/ZZ_p.hpp
-         serialization/ZZX.hpp
-         serialization/ZZ_pX.hpp
-)
-
-target_link_libraries(
-  RGBtoYCbCr_test
-  ${LIBS}
 )
