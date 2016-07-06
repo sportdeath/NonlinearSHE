@@ -6,26 +6,24 @@
 
 #include "../source/numberTheory.hpp"
 
-bool testGCD() {
-  return NumberTheory::GCD(54, 24) == 6;
+#include "gtest/gtest.h"
+
+TEST(GCDTest, BasicInputs) {
+  ASSERT_EQ(NumberTheory::GCD(54, 24), 6);
 }
 
-bool testEuler() {
+TEST(EulerToitientTest, First30Values) {
   
   std::vector<long> values = {   1, 1, 2, 2, 4, 2, 6, 4, 6,
                               4,10, 4,12, 6, 8, 8,16, 6,18,
                               8,12,10,22, 8,20,12,18,12,28};
 
-  bool areSame = true;
-
   for (long i = 0; i < values.size(); i++) {
-    areSame &= (values[i] == NumberTheory::eulerToitient(i + 1));
+    ASSERT_EQ(values[i], NumberTheory::eulerToitient(i + 1));
   }
-
-  return areSame;
 }
 
-bool testCyclotomic() {
+TEST(CyclotomicPolyTest, First12Polys) {
   NTL::ZZ_p::init(NTL::ZZ(7));
 
   std::vector<long> out1 { -1,  1};            // x - 1
@@ -54,19 +52,16 @@ bool testCyclotomic() {
                                            ou11,
                                            ou12};
 
-  bool areSame = true;
 
   for (long i = 0; i < outs.size(); i++) {
     NTL::ZZX poly = NumberTheory::cyclotomicPoly(i + 1);
     for (long j = 0; j <= NumberTheory::eulerToitient(i + 1); j++) {
-      areSame &= (poly[j] == outs[i][j]);
+      ASSERT_EQ(poly[j], outs[i][j]);
     }
   }
-
-  return areSame;
 }
 
-bool testCRT() {
+TEST(CRTTest, RandomTest) {
   long q = 257;
   NTL::ZZ_p::init(NTL::ZZ(q));
 
@@ -98,23 +93,11 @@ bool testCRT() {
   NTL::ZZ_pX remainder;
   for (long i = 0; i < numFactors; i++) {
     NTL::rem(remainder, output, factors[i]);
-    isRight &= NTL::rem(rep(remainder[0]), q) == inputs[i];
+    ASSERT_EQ(NTL::rem(rep(remainder[0]), q), inputs[i]);
   }
-
-  return isRight;
 }
 
-int main() {
-  if (not testGCD() ) {
-    std::cout << "GCD test failed!" << std::endl;
-  }
-  if (not testEuler() ) {
-    std::cout << "Euler test failed!" << std::endl;
-  }
-  if (not testCyclotomic() ) {
-    std::cout << "Cyclotomic poly test failed!" << std::endl;
-  }
-  if (not testCRT() ) {
-    std::cout << "Chinese Remainder Theorem test failed!" << std::endl;
-  }
+int main(int argc, char ** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

@@ -8,22 +8,45 @@
 #include "../source/cipherText.hpp"
 #include "../source/functions.hpp"
 
-bool testRandomKeyPoly() {
-  YASHE SHE(2,NTL::ZZ(15688861),7,8,NTL::ZZ(2));
+#include "gtest/gtest.h"
 
+class YASHETest : public ::testing::Test {
+  protected:
+
+    static long d, t;
+    static NTL::ZZ q, w;
+    static YASHE SHE;
+
+};
+
+long YASHETest::t = 257;
+NTL::ZZ YASHETest::q = NTL::GenPrime_ZZ(400);
+long YASHETest::d = 22016; // 2^9*43 - 5376 irreducible factors
+NTL::ZZ YASHETest::w = NTL::power2_ZZ(70);
+YASHE YASHETest::SHE = YASHE(t,q,d,8,w);
+
+TEST_F(YASHETest, RandomKeyPolyBounds) {
+  NTL::ZZ_pX randPoly = SHE.randomKeyPoly();
+  for (long i = 0; i <= deg(randPoly) ) {
+    ASSERT_LE(randPoly[i],1);
+    ASSERT_GE(randPoly[i],-1);
+  }
+}
+
+TEST_F(YASHETest, RandomKeyPolyDifferent) {
   NTL::ZZ_pX randPoly1 = SHE.randomKeyPoly();
   NTL::ZZ_pX randPoly2 = SHE.randomKeyPoly();
 
-  return (deg(randPoly1) <= 6) & (randPoly1 != randPoly2);
+  ASSERT_NE(randPoly1, randPoly2);
 }
 
-bool testRandomErrPoly() {
-  YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(2));
+TEST_F(YASHETest, RandomErrPolyBounds) {
+  NTL::ZZ_pX randPoly = SHE.randomKeyPoly();
 
-  NTL::ZZ_pX randPoly1 = SHE.randomErrPoly();
-  NTL::ZZ_pX randPoly2 = SHE.randomErrPoly();
-
-  return (deg(randPoly1) == 3) & (randPoly1 != randPoly2);
+  for (long i = 0; i <= deg(randPoly) ) {
+    ASSERT_LE(randPoly[i],1);
+    ASSERT_GE(randPoly[i],-1);
+  }
 }
 
 bool testRadixDecompInt() {
@@ -43,7 +66,7 @@ bool testRadixDecompInt() {
   return isSame;
 }
 
-bool testRadixDecompPoly() {
+void testRadixDecompPoly() {
   YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(3));
 
   NTL::ZZ_pX testPoly;
@@ -726,95 +749,7 @@ void testReadWrite() {
 }
 
 
-int main() {
-
-  //if (not testRandomKeyPoly() ) {
-    //std::cout << "Test failed for generating random key poly!" << std::endl;
-  //} else {
-    //std::cout << "Passed: random key poly!" << std::endl;
-  //}
-  //if (not testRandomErrPoly() ) {
-    //std::cout << "Test failed for generating random err poly!" << std::endl;
-  //} else {
-    //std::cout << "Passed: random err poly!" << std::endl;
-  //}
-  //if (not testRadixDecompPoly() ) {
-    //std::cout << "Test failed for radix decomp!" << std::endl;
-  //} else {
-    //std::cout << "Passed: radix decomp!" << std::endl;
-  //}
-  //if (not testPowersOfRadix() ) {
-    //std::cout << "Test failed for powers of radix!" << std::endl;
-  //} else {
-    //std::cout << "Passed: powers of radix!" << std::endl;
-  //}
-  //if (not testDecompPowers() ) {
-    //std::cout << "Powers Decomp identity failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: powers decomp identity!" << std::endl;
-  //}
-  //if (not testKeyGen() ) {
-    //std::cout << "Key gen test failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: key gen!" << std::endl;
-  //}
-  //if (not testEncryptDecrypt() ) {
-    //std::cout << "Encryption failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: encryption decryption!" << std::endl;
-  //}
-  //if (not testEncryptDecryptBatch() ) {
-    //std::cout << "Batch Encryption/Decryption failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: batch encryption decryption!" << std::endl;
-  //}
-  //if (not testAddBatchCiphertexts() ) {
-    //std::cout << "Batch addition failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: batch addition!" << std::endl;
-  //}
-  //if (not testMulBatchCiphertexts() ) {
-    //std::cout << "Batch multiplication failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: batch multiplication!" << std::endl;
-  //}
-  //if (not testAddCiphertexts() ) {
-    //std::cout << "Addition failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: addition!" << std::endl;
-  //}
-  //if (not testMulCiphertexts() ) {
-    //std::cout << "Multiplication failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: multiplication!" << std::endl;
-  //}
-  //if (not testAdditionByConstant() ) {
-    //std::cout << "Addition by constant failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: addition by constant!" << std::endl;
-  //}
-  //if (not testMultiplicationByConstant() ) {
-    //std::cout << "Multiplication by constant failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed: multiplication by constant!" << std::endl;
-  //}
-  //if (not testEvalPoly() ) {
-    //std::cout << "Evaluating polynomial failed!" << std::endl;
-  //} else {
-    //std::cout << "Passed evaluating polynomial!" << std::endl;
-  //}
-  if (not testBatchDivisionByConstant() ) {
-    std::cout << "Batch Division by constant failed!" << std::endl;
-  } else {
-    std::cout << "Passed: batch division by constant!" << std::endl;
-  }
-
-  testReadWrite();
-  
-  //testDivision();
-
-  //testMultiplicativeDepth();
-  //testAdditiveDepth();
-
-  return 0;
+int main(int argc, char ** argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

@@ -5,6 +5,8 @@
 
 #include "NumberTheory.hpp"
 
+#include "gtest/gtest.h"
+
 long NumberTheory::GCD(long a, long b) {
   return b == 0 ? a : GCD(b, a % b);
 }

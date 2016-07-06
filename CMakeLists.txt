@@ -88,23 +88,25 @@ target_link_libraries(
   ${LIBS}
 )
 
-#add_executable(yashe_test
-				 #unitTests/yashe_test.cpp
-         #source/numberTheory.hpp
-         #source/numberTheory.cpp
-         #source/yashe.cpp
-         #source/yashe.hpp
-         #source/cipherText.cpp
-         #source/cipherText.hpp
-         #source/functions.cpp
-         #source/functions.hpp
-         #serialization/ZZ.hpp
-         #serialization/ZZ_p.hpp
-         #serialization/ZZX.hpp
-         #serialization/ZZ_pX.hpp
-#)
+add_executable(yashe_test
+         unitTests/yashe_test.cpp
+         source/numberTheory.hpp
+         source/numberTheory.cpp
+         source/yashe.cpp
+         source/yashe.hpp
+         source/cipherText.cpp
+         source/cipherText.hpp
+         source/functions.cpp
+         source/functions.hpp
+         serialization/ZZ.hpp
+         serialization/ZZ_p.hpp
+         serialization/ZZX.hpp
+         serialization/ZZ_pX.hpp
+)
 
-#target_link_libraries(
-  #yashe_test
-	#${LIBS}
-#)
+add_dependencies(yashe_test gtest)
+
+target_link_libraries(
+  yashe_test
+  ${LIBS}
+)
