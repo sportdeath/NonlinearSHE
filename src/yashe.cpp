@@ -54,22 +54,11 @@ YASHE::YASHE(long pModulus_,
     NTL::ZZ_pXModulus pModulusX;
     NTL::build(pModulusX, NTL::conv<NTL::ZZ_pX>(cycloModX));
     NTL::vec_ZZ_pX factors_;
-    NTL::SFCanZass(factors_, pModulusX , 1);
+    NTL::SFCanZass(factors_, pModulusX);
     factors.resize(factors_.length());
     for (long i = 0; i < factors_.length(); i++) {
       factors[i] = factors_[i];
     }
-
-    //NTL::ZZ_pX fInv, fInvInv;
-    //crtElements.resize(factors.size());
-
-    //for (long i = 0; i < factors.size(); i++) {
-      //div(fInv, pModulusX, factors[i]);
-      //rem(fInvInv, fInv, factors[i]);
-      //InvMod(fInvInv, fInvInv, factors[i]);
-
-      //crtElements[i] = MulMod(fInv, fInvInv, pModulusX);
-    //}
   }
 
   {
@@ -228,6 +217,7 @@ void YASHE::dot(NTL::ZZ_pX& output,
   for (long i = 0; i < decompSize; i++) {
     NTL::MulMod(product, a[i], b[i], cycloMod);
     output += product;
+    NTL::rem(output, output, cycloMod);
   }
 }
 

@@ -1,5 +1,6 @@
 #include <vector>
 
+#include <NTL/ZZ_p.h>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/ZZ_pXFactoring.h>
@@ -65,6 +66,8 @@ TEST(CRTTest, RandomTest) {
   long q = 257;
   NTL::ZZ_p::init(NTL::ZZ(q));
 
+  std::cout << NTL::ZZ_p::modulus() << std::endl;
+
   srand(time(0));
 
   NTL::ZZX cyclo = NumberTheory::cyclotomicPoly(16);
@@ -79,7 +82,6 @@ TEST(CRTTest, RandomTest) {
     inputs[i] = rand() % q;
     factors[i] = factors_[i];
   }
-
   
   NTL::ZZ_pXModulus modulus(cycloMod);
 
@@ -88,7 +90,6 @@ TEST(CRTTest, RandomTest) {
   NumberTheory::CRT(output, inputs, modulus, factors);
 
   // make sure that crt mod f[i] = m[i]
-  
   NTL::ZZ_pX remainder;
   for (long i = 0; i < numFactors; i++) {
     NTL::rem(remainder, output, factors[i]);

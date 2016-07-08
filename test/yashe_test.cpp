@@ -4,69 +4,86 @@
 
 #include <NTL/ZZ.h>
 
-#include "base/yashe.hpp"
-#include "base/cipherText.hpp"
-#include "base/functions.hpp"
+#include <YASHE/YASHE.hpp>
+#include <YASHE/cipherText.hpp>
+#include <YASHE/functions.hpp>
 
 #include "gtest/gtest.h"
 
-class YASHETest : public ::testing::Test {
+class YASHE8BitTest : public ::testing::Test {
   protected:
 
-    static long d, t;
+    static long d, t, sigma;
     static NTL::ZZ q, w;
+    static NTL::ZZ_pX secretKey;
     static YASHE SHE;
+
+    virtual void SetUp() {
+      srand(time(0));
+      NTL::ZZ_p::init(q);
+    }
 
 };
 
-long YASHETest::t = 257;
-NTL::ZZ YASHETest::q = NTL::GenPrime_ZZ(400);
-long YASHETest::d = 22016; // 2^9*43 - 5376 irreducible factors
-NTL::ZZ YASHETest::w = NTL::power2_ZZ(70);
-YASHE YASHETest::SHE = YASHE(t,q,d,8,w);
+long YASHE8BitTest::t = 257;
+NTL::ZZ YASHE8BitTest::q = NTL::GenPrime_ZZ(500);
+long YASHE8BitTest::d = 512; // 22016= 2^9*43 - 5376 irreducible factors
+long YASHE8BitTest::sigma = 8;
+NTL::ZZ YASHE8BitTest::w = NTL::power2_ZZ(70);
+YASHE YASHE8BitTest::SHE = YASHE(t,q,d,sigma,w);
+NTL::ZZ_pX YASHE8BitTest::secretKey = SHE.keyGen();
 
-TEST_F(YASHETest, RandomKeyPolyBounds) {
+
+
+TEST_F(YASHE8BitTest, RandomKeyPolyBounds) {
   NTL::ZZ_pX randPoly = SHE.randomKeyPoly();
-  for (long i = 0; i <= deg(randPoly) ) {
-    ASSERT_LE(randPoly[i],1);
-    ASSERT_GE(randPoly[i],-1);
+  for (long i = 0; i <= deg(randPoly); i++ ) {
+    ASSERT_TRUE(randPoly[i] == 0 |
+                randPoly[i] == 1 |
+                randPoly[i] == -1);
   }
 }
 
-TEST_F(YASHETest, RandomKeyPolyDifferent) {
+TEST_F(YASHE8BitTest, RandomKeyPolyDifferent) {
   NTL::ZZ_pX randPoly1 = SHE.randomKeyPoly();
   NTL::ZZ_pX randPoly2 = SHE.randomKeyPoly();
 
   ASSERT_NE(randPoly1, randPoly2);
 }
 
-TEST_F(YASHETest, RandomErrPolyBounds) {
+TEST_F(YASHE8BitTest, RandomErrPolyBounds) {
   NTL::ZZ_pX randPoly = SHE.randomKeyPoly();
 
-  for (long i = 0; i <= deg(randPoly) ) {
-    ASSERT_LE(randPoly[i],1);
-    ASSERT_GE(randPoly[i],-1);
+  for (long i = 0; i <= deg(randPoly); i++ ) {
+    ASSERT_TRUE(rep(randPoly[i]) < sigma * 6 |
+                rep(randPoly[i]) > q - 6 * sigma);
   }
 }
 
-bool testRadixDecompInt() {
+
+TEST_F(YASHE8BitTest, RandomERRPolyDifferent) {
+  NTL::ZZ_pX randPoly1 = SHE.randomErrPoly();
+  NTL::ZZ_pX randPoly2 = SHE.randomErrPoly();
+
+  ASSERT_NE(randPoly1, randPoly2);
+}
+
+
+TEST(YASHETest, RadixDecompInt) {
   YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(3));
 
   std::vector<NTL::ZZ> decomp;
   SHE.radixDecomp(decomp, NTL::ZZ(200));
-
   
   std::vector<long> result {2, 0, 1, 1, 2, 0};
 
-  bool isSame = true;
-
   for (long i = 0; i < decomp.size(); i++) {
-    isSame = isSame & (decomp[i] == result[i]);
+    ASSERT_EQ(decomp[i], result[i]);
   }
-  return isSame;
 }
 
-void testRadixDecompPoly() {
+
+TEST(YASHETest, RadixDempPoly) {
   YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(3));
 
   NTL::ZZ_pX testPoly;
@@ -90,19 +107,14 @@ void testRadixDecompPoly() {
   std::vector<NTL::ZZ_pX> decomp;
   SHE.radixDecomp(decomp, testPoly);
 
-  bool isSame = true;
-
   for (long i = 0; i < 6; i++) {
     for (long j = 0; j < 5; j++) {
-      isSame = isSame & (decomp[i][j] == outs[i][j]);
+      ASSERT_EQ(decomp[i][j], outs[i][j]);
     }
   }
-      
-
-  return isSame;
 }
 
-bool testPowersOfRadix() {
+TEST(YASHETest, PowersOfRadix) {
   YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(3));
 
   NTL::ZZ_pX testPoly;
@@ -126,22 +138,16 @@ bool testPowersOfRadix() {
   std::vector<NTL::ZZ_pX> powers;
   SHE.powersOfRadix(powers, testPoly);
 
-  bool isSame = true;
-
   for (long i = 0; i < 6; i++) {
     for (long j = 0; j < 5; j++) {
-      isSame = isSame & (powers[i][j] == outs[i][j]);
+      ASSERT_EQ(powers[i][j], outs[i][j]);
     }
   }
-  return isSame;
 }
 
-bool testDecompPowers() {
-
-  YASHE SHE(2,NTL::ZZ(257),5,8,NTL::ZZ(3));
-
-  NTL::ZZ_pX testPoly1 = SHE.randomKeyPoly();
-  NTL::ZZ_pX testPoly2 = SHE.randomKeyPoly();
+TEST_F(YASHE8BitTest, DecompPowers) {
+  NTL::ZZ_pX testPoly1 = SHE.randomErrPoly();
+  NTL::ZZ_pX testPoly2 = SHE.randomErrPoly();
 
   NTL::ZZ_pX mulPoly = NTL::MulMod(testPoly1, testPoly2, SHE.getCycloMod());
 
@@ -152,60 +158,148 @@ bool testDecompPowers() {
   NTL::ZZ_pX dotPoly;
   SHE.dot(dotPoly, powers, decomp);
 
-  return mulPoly==dotPoly;
+  ASSERT_EQ(mulPoly, dotPoly);
+}
+
+TEST_F(YASHE8BitTest, EncryptDecrypt) {
+  long message = rand() % t;
+
+  YASHE_CT ciphertext = SHE.encrypt(message);
+
+  long decryption = SHE.decrypt(ciphertext, secretKey);
+
+  for (long i = 0; i <=SHE.getMaxDegree(); i++) {
+    ASSERT_EQ(message, decryption);
+  }
 }
 
 
-bool testKeyGen() {
-  YASHE SHE(2,NTL::ZZ(15688861),5,8,NTL::ZZ(3));
+TEST_F(YASHE8BitTest, AdditionByConstant) {
+  long message = rand() % t;
+  long constant = rand() % t;
 
-  SHE.keyGen();
+  YASHE_CT ciphertext = SHE.encrypt(message);
 
-  return true;
+  YASHE_CT::add(ciphertext, ciphertext, constant);
+
+  long decryption = SHE.decrypt(ciphertext, secretKey);
+
+  ASSERT_EQ((message + constant) % t, decryption);
 }
 
-//bool testEncryptDecrypt() {
-  //long t = 257;
-  //NTL::ZZ q = NTL::GenPrime_ZZ(392);
-  //long d = 16384;
-  //NTL::ZZ w = NTL::power2_ZZ(32);
-  //YASHE SHE(t,q,d,8,w);
 
-  //NTL::ZZ_pX secretKey = SHE.keyGen();
+TEST_F(YASHE8BitTest, MultiplyByConstant) {
+  long message = rand() % t;
+  long constant = rand() % t;
 
-  //std::vector<long> message(SHE.getMaxDegree() + 1);
+  YASHE_CT ciphertext = SHE.encrypt(message);
 
-  //srand(time(0));
+  YASHE_CT::mul(ciphertext, ciphertext, constant);
 
-  //for (long i = 0; i <= SHE.getMaxDegree(); i++) {
-    //message[i] = rand() % t;
-  //}
+  long decryption = SHE.decrypt(ciphertext, secretKey);
 
-  //YASHE_CT ciphertext = SHE.encrypt(message);
-
-  //std::vector<long> decryption = SHE.decryptVec(ciphertext, secretKey);
-
-  //bool isSame = true;
-  //for (long i = 0; i <=SHE.getMaxDegree(); i++) {
-    //isSame &= (message[i] == decryption[i]);
-  //}
-
-  //return isSame;
-//}
+  ASSERT_EQ((message * constant) % t, decryption);
+}
 
 
-bool testEncryptDecryptBatch() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(392);
-  long d = 2048;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
+TEST_F(YASHE8BitTest, Add) {
+  long message1 = rand() % t;
+  long message2 = rand() % t;
 
-  NTL::ZZ_pX secretKey = SHE.keyGen();
+  YASHE_CT ciphertext1 = SHE.encrypt(message1);
+  YASHE_CT ciphertext2 = SHE.encrypt(message2);
 
+  YASHE_CT::add(ciphertext1, ciphertext1, ciphertext2);
+  long decryption = SHE.decrypt(ciphertext1, secretKey);
+
+  ASSERT_EQ((message1 + message2) % t, decryption);
+}
+
+
+TEST_F(YASHE8BitTest, Subtract) {
+  long message1 = rand() % t;
+  long message2 = rand() % t;
+
+  YASHE_CT ciphertext1 = SHE.encrypt(message1);
+  YASHE_CT ciphertext2 = SHE.encrypt(message2);
+
+  YASHE_CT::sub(ciphertext1, ciphertext1, ciphertext2);
+  long decryption = SHE.decrypt(ciphertext1, secretKey);
+
+  ASSERT_EQ((message1 + t - message2) % t, decryption);
+}
+
+TEST_F(YASHE8BitTest, Multiply) {
+  long message1 = rand() % t;
+  long message2 = rand() % t;
+
+  YASHE_CT ciphertext1 = SHE.encrypt(message1);
+  YASHE_CT ciphertext2 = SHE.encrypt(message2);
+
+  YASHE_CT::mul(ciphertext1, ciphertext1, ciphertext2);
+
+  long decryption = SHE.decrypt(ciphertext1, secretKey);
+
+  ASSERT_EQ((message1 * message2) % t, decryption);
+}
+
+
+TEST_F(YASHE8BitTest, EvaluatePolynomial) {
+  long degree = t - 1;
+  std::vector<long> poly(degree);
+  for (long i = 0; i < degree; i++) {
+    poly[i] = rand() % t;
+  }
+
+  long message = rand() % t;
+
+  YASHE_CT ciphertext = SHE.encrypt(message);
+  YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
+
+  long decryption = SHE.decrypt(ciphertext, secretKey);
+
+  long result = 0;
+  for (long i = degree - 1; i >= 0; i--) {
+    result = (result * message + poly[i]) % t;
+  }
+
+  ASSERT_EQ(result, decryption);
+}
+
+
+TEST_F(YASHE8BitTest, DivisionByConstant) {
+  long message = rand() % t;
+  long constant = rand() % t;
+
+  std::vector<long> poly = 
+    Functions::functionToPoly(Functions::divideByConstant(constant), t);
+
+  YASHE_CT ciphertext = SHE.encrypt(message);
+  YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
+
+  long decryption = SHE.decrypt(ciphertext, secretKey);
+
+  ASSERT_EQ(message/constant, decryption);
+}
+
+
+TEST_F(YASHE8BitTest, Division) {
+  long message1 = rand() % t;
+  long message2 = rand() % t;
+
+  YASHE_CT ciphertext1 = SHE.encrypt(message1);
+  YASHE_CT ciphertext2 = SHE.encrypt(message2);
+
+  YASHE_CT::div(ciphertext1, ciphertext1, ciphertext2);
+
+  long decryption = SHE.decrypt(ciphertext1, secretKey);
+
+  ASSERT_NEAR(message1/message2, decryption, 5);
+}
+
+
+TEST_F(YASHE8BitTest, EncryptDecryptBatch) {
   std::vector<long> message(SHE.getNumFactors());
-
-  srand(time(0));
 
   for (long i = 0; i <= SHE.getNumFactors(); i++) {
     message[i] = rand() % t;
@@ -215,103 +309,15 @@ bool testEncryptDecryptBatch() {
 
   std::vector<long> decryption = SHE.decryptBatch(ciphertext, secretKey);
 
-  bool isSame = true;
-  for (long i = 0; i < SHE.getNumFactors(); i++) {
-    isSame &= (message[i] == decryption[i]);
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++) {
+    ASSERT_EQ(message[i], decryption[i]);
   }
-
-  return isSame;
-}
-
-bool testAddCiphertexts() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(392);
-  long d = 16384;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  //std::vector<long> message1(SHE.getMaxDegree() + 1);
-  //std::vector<long> message2(SHE.getMaxDegree() + 1);
-
-  srand(time(0));
-
-  long message1 = rand() % t;
-  long message2 = rand() % t;
-
-  //for (long i = 0; i <= SHE.getMaxDegree(); i++) {
-    //message1[i] = rand() % t;
-    //message2[i] = rand() % t;
-  //}
-
-  YASHE_CT ciphertext1 = SHE.encrypt(message1);
-  YASHE_CT ciphertext2 = SHE.encrypt(message2);
-
-  clock_t begin = clock();
-
-  YASHE_CT::add(ciphertext1, ciphertext1, ciphertext2);
-
-  clock_t end = clock();
-
-  std::cout << "addition took " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  //std::vector<long> decryption = SHE.decryptVec(ciphertext1, secretKey);
-  long decryption = SHE.decrypt(ciphertext1, secretKey);
-
-  //bool isSame = true;
-  ////for (long i = 0; i <=SHE.getMaxDegree(); i++) {
-    //isSame &= ((message1[i] + message2[i]) % t == decryption[i]);
-  //}
-  return (message1 + message2) == decryption;
-}
-
-bool testMulCiphertexts() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 32768;
-  //long d = 256;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  long message1, message2;
-  message1 = rand() % t;
-  message2 = rand() % t;
-
-  YASHE_CT ciphertext1 = SHE.encrypt(message1);
-  YASHE_CT ciphertext2 = SHE.encrypt(message2);
-
-  clock_t begin = clock();
-
-  YASHE_CT::mul(ciphertext1, ciphertext1, ciphertext2);
-
-  clock_t end = clock();
-
-  std::cout << "multiplication took " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  long decryption = SHE.decrypt(ciphertext1, secretKey);
-
-
-  return (message1 * message2) % t == decryption;
 }
 
 
-bool testAddBatchCiphertexts() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 2048;
-  //long d = 256;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
+TEST_F(YASHE8BitTest, AddBatch) {
   std::vector<long> message1(SHE.getNumFactors());
   std::vector<long> message2(SHE.getNumFactors());
   for (long i = 0; i < SHE.getNumFactors(); i++) {
@@ -322,38 +328,17 @@ bool testAddBatchCiphertexts() {
   YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
   YASHE_CT ciphertext2 = SHE.encryptBatch(message2);
 
-  clock_t begin = clock();
-
   YASHE_CT::add(ciphertext1, ciphertext1, ciphertext2);
-
-  clock_t end = clock();
-
-  std::cout << "addition took " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
 
   std::vector<long> decryption = SHE.decryptBatch(ciphertext1, secretKey);
 
-  bool isSame = true;
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
 
-  for (long i = 0; i < SHE.getNumFactors(); i++) {
-    isSame &=  (message1[i] + message2[i]) % t == decryption[i];
-  }
-
-  return isSame;
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_EQ((message1[i] + message2[i]) % t, decryption[i]);
 }
 
-
-bool testMulBatchCiphertexts() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 2048;
-  //long d = 256;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
+TEST_F(YASHE8BitTest, SubtractBatch) {
   std::vector<long> message1(SHE.getNumFactors());
   std::vector<long> message2(SHE.getNumFactors());
   for (long i = 0; i < SHE.getNumFactors(); i++) {
@@ -364,390 +349,83 @@ bool testMulBatchCiphertexts() {
   YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
   YASHE_CT ciphertext2 = SHE.encryptBatch(message2);
 
-  clock_t begin = clock();
-
-  YASHE_CT::mul(ciphertext1, ciphertext1, ciphertext2);
-
-  clock_t end = clock();
-
-  std::cout << "multiplication took " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
+  YASHE_CT::sub(ciphertext1, ciphertext1, ciphertext2);
 
   std::vector<long> decryption = SHE.decryptBatch(ciphertext1, secretKey);
 
-  bool isSame = true;
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_EQ((message1[i] + t - message2[i]) % t, decryption[i]);
+}
+
+TEST_F(YASHE8BitTest, MultiplyBatch) {
+  std::vector<long> message1(SHE.getNumFactors());
+  std::vector<long> message2(SHE.getNumFactors());
+  for (long i = 0; i < SHE.getNumFactors(); i++) {
+    message1[i] = rand() % t;
+    message2[i] = rand() % t;
+  }
+
+  YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
+  YASHE_CT ciphertext2 = SHE.encryptBatch(message2);
+
+  YASHE_CT::mul(ciphertext1, ciphertext1, ciphertext2);
+
+  std::vector<long> decryption = SHE.decryptBatch(ciphertext1, secretKey);
+
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_EQ((message1[i] * message2[i]) % t, decryption[i]);
+}
+
+
+TEST_F(YASHE8BitTest, DivisionByConstantBatch) {
+  std::vector<long> message(SHE.getNumFactors());
 
   for (long i = 0; i < SHE.getNumFactors(); i++) {
-    isSame &=  (message1[i] * message2[i]) % t == decryption[i];
+    message[i] = rand() % t;
   }
 
-  return isSame;
-}
+  YASHE_CT ciphertext = SHE.encryptBatch(message);
 
-
-bool testAdditionByConstant() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 32768;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  long message = rand() % t;
   long constant = rand() % t;
-
-  YASHE_CT ciphertext = SHE.encrypt(message);
-
-  clock_t begin = clock();
-
-  YASHE_CT::add(ciphertext, ciphertext, constant);
-
-  clock_t end = clock();
-
-  std::cout << "addition by constant took: " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  long decryption = SHE.decrypt(ciphertext, secretKey);
-
-  return (message + constant) % t == decryption;
-}
-
-
-bool testMultiplicationByConstant() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 32768;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  long message = rand() % t;
-  long constant = rand() % t;
-
-  YASHE_CT ciphertext = SHE.encrypt(message);
-
-  clock_t begin = clock();
-
-  YASHE_CT::mul(ciphertext, ciphertext, constant);
-
-  clock_t end = clock();
-
-  std::cout << "multiplication by constant took: " << double(end - begin)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  long decryption = SHE.decrypt(ciphertext, secretKey);
-
-  return (message * constant) % t == decryption;
-}
-
-
-bool testMultiplicativeDepth() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(800);
-  long d = 32768;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  long depth = 0;
-
-  long message1, message2, decryption;
-  message1 = rand() % t;
-  YASHE_CT ciphertext1 = SHE.encrypt(message1);
-  do {
-    message2 = rand() % t;
-
-    YASHE_CT ciphertext2 = SHE.encrypt(message2);
-
-    YASHE_CT::mul(ciphertext1, ciphertext1, ciphertext2);
-
-    decryption = SHE.decrypt(ciphertext1, secretKey);
-
-    message1 = (message1 * message2) % t;
-
-    depth += 1;
-
-    std::cout << message1 << " " << decryption << std::endl;
-  } while (message1 == decryption);
-
-  std::cout << "reached maximum multiplication depth of " << depth << "!" << std::endl;
-
-  return true;
-}
-
-bool testAdditiveDepth() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(32);
-  long d = 256;
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  long depth = 0;
-
-  long message1, message2, decryption;
-  message1 = rand() % t;
-  YASHE_CT ciphertext1 = SHE.encrypt(message1);
-  do {
-    message2 = rand() % t;
-
-    YASHE_CT ciphertext2 = SHE.encrypt(message2);
-
-    YASHE_CT::add(ciphertext1, ciphertext1, ciphertext2);
-
-    decryption = SHE.decrypt(ciphertext1, secretKey);
-
-    message1 = (message1 + message2) % t;
-
-    depth += 1;
-
-    std::cout << message1 << " " << decryption << std::endl;
-  } while (message1 == decryption);
-
-  std::cout << "reached maximum additive depth of " << depth << "!" << std::endl;
-
-  return true;
-}
-
-bool testEvalPoly() {
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(1024);
-  long d = 1024; 
-  NTL::ZZ w = NTL::power2_ZZ(32);
-  YASHE SHE(t,q,d,8,w);
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  srand(time(0));
-
-  //std::cout << "poly = [";
-  long degree = 256;
-  std::vector<long> poly(degree);
-  for (long i = 0; i < degree; i++) {
-    poly[i] = rand() % t;
-    //std::cout << poly[i] << " ";
-  }
-  //std::cout << "]" << std::endl;
-
-  long message = rand() % t;
-
-  //std::cout << "input: " << message << std::endl;
-
-  YASHE_CT ciphertext = SHE.encrypt(message);
+  std::vector<long> poly = 
+    Functions::functionToPoly(Functions::divideByConstant(constant), t);
 
   YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
-
-  long decryption = SHE.decrypt(ciphertext, secretKey);
-
-  long result = 0;
-  for (long i = degree - 1; i >= 0; i--) {
-    //if (i % 4 == 0) {
-      //std::cout << "subtotal up to degree " << i - 1 << " = " << result << std::endl;
-    //}
-    result = (result * message + poly[i]) % t;
-  }
-  //std::cout << "desired result: " << result << std::endl;
-
-  return result == decryption;
-
-}
-
-bool testDivisionByConstant() {
-
-
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(1424);
-  long d = 65536;
-  NTL::ZZ w = NTL::power2_ZZ(300);
-  YASHE SHE(t,q,d,8,w);
-
-  clock_t start, end;
-
-  start = clock();
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  end = clock();
-
-  std::cout << "Keygen took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  srand(time(0));
-
-  long denominator = rand() % t;
-  if (denominator == 0) {
-    denominator += 1;
-  }
-
-  std::vector<long> poly = Functions::functionToPoly(Functions::divideByConstant(denominator), t);
-
-  long numerator = rand() % t;
-
-  YASHE_CT ciphertext = SHE.encrypt(numerator);
-
-  start = clock();
-
-  YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
-  end = clock();
-
-  std::cout << "division took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  long decryption = SHE.decrypt(ciphertext, secretKey);
-
-  return decryption == numerator/denominator;
-}
-
-
-bool testBatchDivisionByConstant() {
-  long t = 257;
-  //NTL::ZZ q = NTL::GenPrime_ZZ(400);
-  ////long d = 688;
-  //long d = 22016; // 2^9*43 - 5376 irreducible factors
-  ////long d = 66048; // 2^9*3*43 - 10752 irreducible factors
-  ////long d = 1376*2; // 2^5 * 43
-  //NTL::ZZ w = NTL::power2_ZZ(70);
-  //YASHE SHE(t,q,d,8,w);
-  //SHE.writeToFile("8BitFHE");
-  YASHE SHE = YASHE::readFromFile("/Users/tfh/Dropbox (MIT)/Work/Orange/YASHE/build/8BitFHE");
-
-
-  std::cout << "batch size: " << SHE.getNumFactors() << std::endl;
-
-  clock_t start, end;
-
-  start = clock();
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  end = clock();
-
-  std::cout << "Keygen took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  srand(time(0));
-
-  long denominator = rand() % t;
-  if (denominator == 0) {
-    denominator += 1;
-  }
-
-  denominator = 2;
-
-  std::vector<long> poly = Functions::functionToPoly(Functions::divideByConstant(denominator), t);
-
-  std::vector<long> numerators(SHE.getNumFactors());
-  for (long i = 0; i < SHE.getNumFactors(); i++) {
-    numerators[i] = rand() % t;
-  }
-  start = clock();
-
-  YASHE_CT ciphertext = SHE.encryptBatch(numerators);
-  end = clock();
-
-  std::cout << "encryption took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  start = clock();
-
-  YASHE_CT::evalPoly(ciphertext, ciphertext, poly);
-  end = clock();
-
-  std::cout << "division took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
 
   std::vector<long> decryption = SHE.decryptBatch(ciphertext, secretKey);
 
-  bool isSame = true;
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_EQ(message[i]/constant , decryption[i]);
+}
+
+
+TEST_F(YASHE8BitTest, DivisionBatch) {
+  std::vector<long> message1(SHE.getNumFactors());
+  std::vector<long> message2(SHE.getNumFactors());
 
   for (long i = 0; i < SHE.getNumFactors(); i++) {
-    isSame &= (decryption[i] == numerators[i]/denominator);
-    if (decryption[i] != numerators[i]/denominator) {
-      std::cout << "failed: " << numerators[i] << "/" << denominator << "!=" << decryption[i] << std::endl;
-    } else {
-      //std::cout << numerators[i] << "/" << denominator << "=" << decryption[i] << std::endl;
-    }
+    message1[i] = rand() % t;
+    message2[i] = rand() % t;
   }
 
-  return isSame;
+  YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
+  YASHE_CT ciphertext2 = SHE.encryptBatch(message2);
+
+  YASHE_CT::div(ciphertext1, ciphertext1, ciphertext2);
+
+  std::vector<long> decryption = SHE.decryptBatch(ciphertext1, secretKey);
+
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_NEAR(message1[i]/message2[i] , decryption[i], 5);
 }
-
-
-bool testDivision() {
-  std::cout << "oh boy.. :^)" << std::endl;
-  long t = 257;
-  NTL::ZZ q = NTL::GenPrime_ZZ(2348);
-  //long d = 32768;
-  //long d = 65536;
-  long d = 4096;
-  NTL::ZZ w = NTL::power2_ZZ(400);
-  YASHE SHE(t,q,d,8,w);
-
-  clock_t start, end;
-
-  start = clock();
-
-  NTL::ZZ_pX secretKey = SHE.keyGen();
-
-  end = clock();
-
-  std::cout << "Keygen took: " 
-    << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-  srand(time(0));
-
-  for (long i = 0; i < 100; i++) {
-
-    long denominator, numerator;
-    //do {
-      denominator = rand() % t;
-      numerator = rand() % t;
-    //} while (denominator > numerator);
-
-    YASHE_CT ciphertextN = SHE.encrypt(numerator);
-    YASHE_CT ciphertextD = SHE.encrypt(denominator);
-
-    start = clock();
-
-
-    YASHE_CT::div(ciphertextN, ciphertextN, ciphertextD);
-
-    end = clock();
-
-    std::cout << "division took: " 
-      << double(end - start)/CLOCKS_PER_SEC << "seconds" << std::endl;
-
-    long output = SHE.decrypt(ciphertextN, secretKey);
-
-    long desired;
-    if (denominator != 0) {
-      desired = numerator/denominator;
-    } else {
-      desired = numerator;
-    }
-
-    std::cout << "error: " << desired - output << "\t" << numerator << "/" << denominator << std::endl;
-
-    //std::cout << numerator<<"/" << denominator << "= " << output << "(" << desired << ")" << std::endl;
-  }
-
-  return true;
-}
-
-void testReadWrite() {
-  YASHE SHE = YASHE::readFromFile("8BitFHE");
-  NTL::ZZ_pX sk = SHE.keyGen();
-}
-
 
 int main(int argc, char ** argv) {
   ::testing::InitGoogleTest(&argc, argv);
