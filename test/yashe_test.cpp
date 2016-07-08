@@ -4,9 +4,9 @@
 
 #include <NTL/ZZ.h>
 
-#include "../source/yashe.hpp"
-#include "../source/cipherText.hpp"
-#include "../source/functions.hpp"
+#include "base/yashe.hpp"
+#include "base/cipherText.hpp"
+#include "base/functions.hpp"
 
 #include "gtest/gtest.h"
 

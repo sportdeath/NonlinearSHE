@@ -12,7 +12,20 @@ endif()
 #Adding cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/modules/)
 
-include(ExternalProject)
+#######################
+## Internal Libraries
+#######################
+
+set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+set(PROJECT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(PROJECT_SOURCES
+  ${PROJECT_SOURCE_DIR}/yashe.cpp
+  ${PROJECT_SOURCE_DIR}/ciphertext.cpp
+  ${PROJECT_SOURCE_DIR}/numberTheory.cpp
+  ${PROJECT_SOURCE_DIR}/functions.cpp
+)
+
+include_directories("${PROJECT_INCLUDE_DIR}")
 
 #######################
 ## External Libraries
@@ -44,8 +57,22 @@ if(NOT Boost_FOUND)
   message(ERROR " Boost not found!")
 endif(NOT Boost_FOUND)
 
+
+####################
+## Library Creation
+####################
+
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCES})
+target_link_libraries(${PROJECT_NAME} ${LIBS})
+set(LIBS ${LIBS} ${PROJECT_NAME})
+
+##################
+## Google Test
+#################
+
 # Google Test
 # For testing
+include(ExternalProject)
 ExternalProject_Add(
   gtest
   GIT_REPOSITORY https://github.com/google/googletest.git
@@ -54,59 +81,23 @@ ExternalProject_Add(
   UPDATE_COMMAND ""
   INSTALL_COMMAND "")
 
+enable_testing()
+
 ExternalProject_Get_Property(gtest source_dir binary_dir)
 include_directories("${source_dir}/googletest/include")
 set(LIBS ${LIBS} "${binary_dir}/googlemock/gtest/libgtest.a")
 
-##################
-## Unit tests
-#################
+#####################################
+## Unit Tests with CTest and GTest
+#####################################
 
-add_executable(functions_test 
-       unitTests/functions_test.cpp
-       source/functions.cpp
-       source/functions.hpp
-       )
+macro(MAKE_TEST test_name)
+  add_executable(${test_name}
+         test/${test_name}.cpp
+         )
+  target_link_libraries(${test_name} ${LIBS})
+  add_test(${test_name} ${test_name})
+endmacro()
 
-add_dependencies(functions_test gtest)
-
-target_link_libraries(
-  functions_test
-  ${LIBS}
-)
-
-add_executable(numberTheory_test
-         unitTests/numberTheory_test.cpp
-         source/numberTheory.cpp
-         source/numberTheory.hpp
-)
-
-add_dependencies(numberTheory_test gtest)
-
-target_link_libraries(
-  numberTheory_test
-  ${LIBS}
-)
-
-add_executable(yashe_test
-         unitTests/yashe_test.cpp
-         source/numberTheory.hpp
-         source/numberTheory.cpp
-         source/yashe.cpp
-         source/yashe.hpp
-         source/cipherText.cpp
-         source/cipherText.hpp
-         source/functions.cpp
-         source/functions.hpp
-         serialization/ZZ.hpp
-         serialization/ZZ_p.hpp
-         serialization/ZZX.hpp
-         serialization/ZZ_pX.hpp
-)
-
-add_dependencies(yashe_test gtest)
-
-target_link_libraries(
-  yashe_test
-  ${LIBS}
-)
+MAKE_TEST(functions_test)
+MAKE_TEST(numberTheory_test)

@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../source/functions.hpp"
+#include <YASHE/functions.hpp>
 
 TEST(PolynomialTest, DivisionPolynomial) {
   srand(time(0));

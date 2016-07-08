@@ -4,7 +4,7 @@
 #include <NTL/ZZ_pX.h>
 #include <NTL/ZZ_pXFactoring.h>
 
-#include "../source/numberTheory.hpp"
+#include <YASHE/numberTheory.hpp>
 
 #include "gtest/gtest.h"
 
@@ -87,7 +87,6 @@ TEST(CRTTest, RandomTest) {
   NTL::ZZ_pX output;
   NumberTheory::CRT(output, inputs, modulus, factors);
 
-  bool isRight = true;
   // make sure that crt mod f[i] = m[i]
   
   NTL::ZZ_pX remainder;

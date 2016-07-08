@@ -3,9 +3,7 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 
-#include "NumberTheory.hpp"
-
-#include "gtest/gtest.h"
+#include "YASHE/numberTheory.hpp"
 
 long NumberTheory::GCD(long a, long b) {
   return b == 0 ? a : GCD(b, a % b);

@@ -5,7 +5,7 @@
 
 #include <NTL/ZZ_pX.h>
 
-#include "yashe.hpp"
+#include "YASHE/YASHE.hpp"
 
 class YASHE_CT {
   private:

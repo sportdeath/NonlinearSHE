@@ -3,9 +3,9 @@
 
 #include <NTL/ZZ_pX.h>
 
-#include "yashe.hpp"
-#include "cipherText.hpp"
-#include "functions.hpp"
+#include "YASHE/YASHE.hpp"
+#include "YASHE/ciphertext.hpp"
+#include "YASHE/functions.hpp"
 
 YASHE_CT::YASHE_CT() {
   poly = NTL::ZZ_pX(0);

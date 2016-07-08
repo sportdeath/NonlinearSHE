@@ -3,7 +3,7 @@
 #include <NTL/ZZ_p.h>
 #include <NTL/ZZ_pX.h>
 
-#include "functions.hpp"
+#include "YASHE/functions.hpp"
 
 std::vector<long> Functions::functionToPoly(std::function<long(long)> f, long modulus) {
   // Temporarily switch the modulus to the new modulus

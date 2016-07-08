@@ -14,16 +14,16 @@
 #include<boost/serialization/utility.hpp>
 #include<boost/serialization/vector.hpp>
 
-#include "../serialization/ZZ.hpp"
-#include "../serialization/ZZX.hpp"
-#include "../serialization/ZZ_p.hpp"
-#include "../serialization/ZZ_pX.hpp"
-#include "../serialization/ZZ_pXModulus.hpp"
-#include "../serialization/FFTRep.hpp"
+#include "YASHE/serialization/ZZ.hpp"
+#include "YASHE/serialization/ZZX.hpp"
+#include "YASHE/serialization/ZZ_p.hpp"
+#include "YASHE/serialization/ZZ_pX.hpp"
+#include "YASHE/serialization/ZZ_pXModulus.hpp"
+#include "YASHE/serialization/FFTRep.hpp"
 
-#include "yashe.hpp"
-#include "cipherText.hpp"
-#include "numberTheory.hpp"
+#include "YASHE/YASHE.hpp"
+#include "YASHE/cipherText.hpp"
+#include "YASHE/numberTheory.hpp"
 
 YASHE::YASHE() {
   randGen = std::mt19937(time(0));
