@@ -2,10 +2,11 @@
 
 #include <NTL/ZZ_p.h>
 #include <NTL/ZZ_pX.h>
+#include <NTL/ZZX.h>
 
 #include "YASHE/functions.hpp"
 
-std::vector<long> Functions::functionToPoly(std::function<long(long)> f, long modulus) {
+NTL::ZZ_pX Functions::functionToPoly(std::function<long(long)> f, long modulus) {
   // Temporarily switch the modulus to the new modulus
   NTL::ZZ bigModulus(modulus);
   NTL::ZZ_pPush push(bigModulus);
@@ -43,13 +44,7 @@ std::vector<long> Functions::functionToPoly(std::function<long(long)> f, long mo
     out += f(i) * deltaX;
   }
 
-  std::vector<long> vectorOut(modulus);
-
-  for (long i = 0; i < modulus; i++) {
-    vectorOut[i] = rem(rep(out[i]), modulus);
-  }
-
-  return vectorOut;
+  return out;
 }
 
 std::function<long(long)> Functions::divideByConstant(long denominator) {

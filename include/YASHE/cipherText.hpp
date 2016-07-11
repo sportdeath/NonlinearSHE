@@ -81,8 +81,13 @@ class YASHE_CT {
      * output = poly[0] + input * poly[1] + input^2 * poly[2] ...
      */
     static void evalPoly(YASHE_CT& output,
-                         YASHE_CT& input,
-                         const std::vector<long>& poly
+                         const YASHE_CT& input,
+                         NTL::ZZ_pX& poly
+                         );
+    static void polyRecursion(YASHE_CT& output,
+                         const NTL::ZZ_pX& poly,
+                         const std::vector<YASHE_CT> & powers,
+                         const std::vector<YASHE_CT> & powersOfPowers
                          );
 
     /**

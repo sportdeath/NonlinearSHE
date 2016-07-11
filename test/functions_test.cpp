@@ -5,6 +5,8 @@
 
 #include "gtest/gtest.h"
 
+#include <NTL/ZZ_pX.h>
+
 #include <YASHE/functions.hpp>
 
 TEST(PolynomialTest, DivisionPolynomial) {
@@ -22,12 +24,12 @@ TEST(PolynomialTest, DivisionPolynomial) {
 
     // create division polynomial
     std::function<long(long)> divideByDenom = Functions::divideByConstant(denominator);
-    std::vector<long> poly = Functions::functionToPoly(divideByDenom, t);
+    NTL::ZZ_pX poly = Functions::functionToPoly(divideByDenom, t);
 
     // Evaluate the polynomial
     long result = 0;
-    for (long i = poly.size() - 1; i >= 0; i--) {
-      result = (result * numerator + poly[i] ) % t;
+    for (long i = deg(poly); i >= 0; i--) {
+      result = (result * numerator + rep(poly[i]) ) % t;
     }
 
     ASSERT_EQ(result, numerator/denominator);

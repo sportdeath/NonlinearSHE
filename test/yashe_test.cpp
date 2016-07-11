@@ -252,10 +252,13 @@ TEST_F(YASHE8BitTest, Multiply) {
 
 TEST_F(YASHE8BitTest, EvaluatePolynomial) {
   long degree = t - 1;
-  std::vector<long> poly(degree);
-  for (long i = 0; i < degree; i++) {
+  NTL::ZZ_pX poly;
+  poly.SetLength(degree + 1);
+  for (long i = 0; i <= degree; i++) {
     poly[i] = rand() % t;
   }
+
+  poly[degree] = 1;
 
   long message = rand() % t;
 
@@ -266,7 +269,7 @@ TEST_F(YASHE8BitTest, EvaluatePolynomial) {
 
   long result = 0;
   for (long i = degree - 1; i >= 0; i--) {
-    result = (result * message + poly[i]) % t;
+    result = (result * message + rep(poly[i])) % t;
   }
 
   ASSERT_EQ(result, decryption);
@@ -277,7 +280,7 @@ TEST_F(YASHE8BitTest, DivisionByConstant) {
   long message = rand() % t;
   long constant = rand() % t;
 
-  std::vector<long> poly = 
+  NTL::ZZ_pX poly = 
     Functions::functionToPoly(Functions::divideByConstant(constant), t);
 
   YASHE_CT ciphertext = SHE.encrypt(message);
@@ -401,7 +404,7 @@ TEST_F(YASHE8BitTest, DivisionByConstantBatch) {
    constant = rand() % t;
   }
 
-  std::vector<long> poly = 
+  NTL::ZZ_pX poly = 
     Functions::functionToPoly(Functions::divideByConstant(constant), t);
 
   YASHE_CT::evalPoly(ciphertext, ciphertext, poly);

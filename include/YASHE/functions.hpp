@@ -5,6 +5,8 @@
 #include <vector>
 #include <functional>
 
+#include <NTL/ZZX.h>
+
 class Functions {
   public:
 
@@ -15,7 +17,7 @@ class Functions {
      * be of degree modulus - 1.
      * The modulus must be prime.
      */
-    static std::vector<long> functionToPoly(std::function<long(long)> f, long modulus);
+    static NTL::ZZ_pX functionToPoly(std::function<long(long)> f, long modulus);
 
     /*********************************
      * These are some basic functions that

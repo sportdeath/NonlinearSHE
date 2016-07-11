@@ -107,7 +107,7 @@ int main(int argc, char * argv[]) {
   };
   // The function is converted into
   // a polynomial of degree t = 257
-  std::vector<long> poly = Functions::functionToPoly(invertColors, 257);
+  NTL::ZZ_pX poly = Functions::functionToPoly(invertColors, 257);
 
   start = clock();
 

@@ -271,8 +271,7 @@ void YASHE::roundMultiply(NTL::ZZ_pX& output,
                           const NTL::ZZ_pX& b) {
 
   // maximum is q^2 * (maxDegree + 1)
-  NTL::ZZ_pPush push((cModulus * cModulus)/pModulus);
-
+  NTL::ZZ_pPush push(bigModulus);
 
   NTL::ZZ_pX product;
   NTL::MulMod(product, a, b, bigCycloMod);
@@ -297,7 +296,7 @@ void YASHE::roundMultiply(NTL::ZZ_pX& output,
                           const NTL::ZZ_pX& a,
                           const NTL::ZZ_pXMultiplier& b) {
   // maximum is q^2 * (maxDegree + 1)
-  NTL::ZZ_pPush push((cModulus * cModulus)/pModulus);
+  NTL::ZZ_pPush push(bigModulus);
 
   NTL::ZZ_pX product;
   NTL::MulMod(product, a, b, bigCycloMod);

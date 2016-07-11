@@ -102,6 +102,93 @@ void YASHE_CT::add(YASHE_CT& output, const long& a, const YASHE_CT& b) {
 }
 
 
+void YASHE_CT::polyRecursion(YASHE_CT & output,
+                             const NTL::ZZ_pX& poly,
+                             const std::vector<YASHE_CT> & powers,
+                             const std::vector<YASHE_CT> & powersOfPowers) {
+
+    std::cout << "starting... " << std::endl;
+
+    long n = deg(poly);
+    long k = powers.size() - 1;
+
+    std::cout << "got parameters" << std::endl;
+
+    if (n <= k) {
+        // Just multiply coefficients by powers
+        YASHE_CT product;
+        output = YASHE_CT(0, powers[1].y);
+        for (long i = 0; i <= deg(poly); i++) {
+            mul(product, rem(rep(poly[i]), powers[1].y -> getPModulus()) , powers[i]);
+            add(output, output, product);
+        }
+    } else {
+        long l = std::ceil(std::log2(n/double(k)) + 1);
+
+        while ( k * (pow(2.0, l) - 1) > n) {
+          l -= 1;
+        }
+        while ( k * (pow(2.0, l) - 1) < n) {
+          l += 1;
+        }
+
+        std::cout << "n: " << n << ", k: " << k << ", l: " << l << std::endl;
+
+        long p = pow(2.0, l -1);
+
+        std::cout << "p: " << p << std::endl;
+
+        NTL::ZZ_pX q, r, c, s;
+        {
+          NTL::ZZ_pPush push(NTL::ZZ(powers[1].y -> getPModulus()));
+          // q is quotient with x^(kp)
+          // r is the remainder
+          // c is quotient of r - x^(k(p - 1)) over q
+          // s is the remainder
+          // x^(kp)
+          NTL::ZZ_pX xToKP(NTL::INIT_MONO, k * p);
+          // x^(k(p -1))
+          NTL::ZZ_pX xToKPMinusOne(NTL::INIT_MONO, k * (p - 1));
+
+
+          std::cout << "poly: " << poly << std::endl;
+          std::cout << "x^(kp): " << xToKP << std::endl;
+
+          DivRem(q, r, poly, xToKP);
+          std::cout << "quotient q: " << q << std::endl;
+          std::cout << "remainder r: " << r << std::endl;
+          std::cout << "x^(k(p - 1)): " << xToKPMinusOne << std::endl;
+          std::cout << "r - x^k(p-1):" << r - xToKPMinusOne << std::endl;
+          DivRem(c, s, r - xToKPMinusOne, q);
+          std::cout << "quotient c: " << c << std::endl;
+          std::cout << "remainder s: " << s << std::endl;
+        }
+
+        // q has degree k(p - 1)
+        // c has degree <= k -1
+        // s has degree <=k(p - 1) - 1
+        YASHE_CT qOutput, cOutput, sOutput;
+
+        polyRecursion(qOutput, q, powers, powersOfPowers);
+        polyRecursion(cOutput, c, powers, powersOfPowers);
+        polyRecursion(sOutput, s, powers, powersOfPowers);
+
+        std::cout << "about to do some computation" << std::endl;
+        std::cout << "addition..." << std::endl;
+        std::cout << "p: " << p << std::endl;
+        std::cout << powersOfPowers.size() << std::endl;
+        add(output, cOutput, powersOfPowers[l - 1]);
+        std::cout << "multiplication..." << std::endl;
+        mul(output,  output, qOutput);
+        std::cout << "addition..." << std::endl;
+        add(output,  output, powersOfPowers[l - 2]);
+        std::cout << "addition..." << std::endl;
+        add(output,  output, sOutput);
+        std::cout << "computation done" << std::endl;
+    }
+}
+
+
 /**
  * Polynomials are evaluated using method by Paterson
  * and Stockmeyer from the 1973 paper "On the number of
@@ -110,99 +197,72 @@ void YASHE_CT::add(YASHE_CT& output, const long& a, const YASHE_CT& b) {
  * with a depth of O(log(d)) where d is the degree.
  */
 void YASHE_CT::evalPoly(YASHE_CT& output,
-                        YASHE_CT& input,
-                        const std::vector<long>& poly) {
-
+                        const YASHE_CT & input,
+                        NTL::ZZ_pX & poly) {
   YASHE * y = input.y;
 
-  long sqrtDegree = sqrt(poly.size() - 1);
+  poly.normalize();
 
-  while ( (sqrtDegree + 1) * sqrtDegree < poly.size()) {
-    sqrtDegree += 1;
+  long n = deg(poly);
+  long k = std::floor(std::sqrt(n/2.));
+  long m = std::ceil(std::log2(1. + std::sqrt(2.*n))); // n = k((2^m) - 1)
+
+  while ( k * (pow(2.0, m) - 1) > n) {
+    k -= 1;
+  }
+  while ( k * (pow(2.0, m) - 1) < n) {
+    k += 1;
   }
 
-  // A vector of all of the powers of the input
-  // from 1 to sqrtDegree
-  std::vector<YASHE_CT> powers(sqrtDegree);
-  std::vector<long> depth(sqrtDegree);
-  powers[0] = input;
+  std::cout << "n: " << n << " k: " << k << " m: " << m << std::endl;
+
+  //Compute x^2 ... x^k
+  std::vector<YASHE_CT> powers(k + 1);
+  std::vector<long> depth(k + 1);
+  powers[0] = YASHE_CT(1, y);
+  powers[1] = input;
   depth[0] = 0;
-  powers[0].generateMultiplier();
-  for (long i = 1; i < sqrtDegree; i++) {
-    long minimumDepth = sqrtDegree;
-    long secondaryDepth = sqrtDegree;
+  depth[1] = 0;
+  //powers[1].generateMultiplier();
+
+  for (long i = 2; i <= k; i++) {
+    std::cout << "i: " << i << std::endl;
+    long minimumDepth = k;
     long minimumIndex = 0;
-    for (long j = 0; j < i/2 + 1; j++) {
-      long newDepth = std::max(depth[j],depth[i - j - 1]);
-      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
+
+    for (long j = 1; j <= i/2.; j++) {
+      long newDepth = std::max(depth[j],depth[i - j]);
+
       if (newDepth < minimumDepth) {
         minimumDepth = newDepth;
         minimumIndex = j;
-        secondaryDepth = newSecDepth;
-      } else if ( newDepth == minimumDepth) {
-        if (newSecDepth < secondaryDepth) {
-          minimumIndex = j;
-          secondaryDepth = newSecDepth;
-        }
-      }
+      } 
     }
+
     depth[i] = minimumDepth + 1;
-    mul(powers[i], powers[minimumIndex], powers[i - minimumIndex -1]);
+
+    mul(powers[i], powers[minimumIndex], powers[i - minimumIndex]);
   }
 
-  // A vector of x^sqrtDegree, x^2sqrtDegree ... x^degree
-  std::vector<YASHE_CT> powersOfPowers(sqrtDegree);
-  powersOfPowers[0] = powers[sqrtDegree - 1];
-  depth[0] = 0;
-  powersOfPowers[0].generateMultiplier();
-  for (long i = 1; i < sqrtDegree; i++) {
-    long minimumDepth = sqrtDegree;
-    long secondaryDepth = sqrtDegree;
-    long minimumIndex = 0;
-    for (long j = 0; j < i/2 + 1; j++) {
-      long newDepth = std::max(depth[j],depth[i - j - 1]);
-      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
-      if (newDepth < minimumDepth) {
-        minimumDepth = newDepth;
-        minimumIndex = j;
-        secondaryDepth = newSecDepth;
-      } else if ( newDepth == minimumDepth) {
-        if (newSecDepth < secondaryDepth) {
-          minimumIndex = j;
-          secondaryDepth = newSecDepth;
-        }
-      }
-    }
-    depth[i] = minimumDepth + 1;
-    mul(powersOfPowers[i], powersOfPowers[minimumIndex], powersOfPowers[i - minimumIndex - 1]);
+  std::cout << "computed powers" << std::endl;
+
+  // Compute x^(2k), x^(4k), x^(8k) ... x^(2^(m-1)k)
+  std::vector<YASHE_CT> powersOfPowers(m);
+  powersOfPowers[0] = YASHE_CT(1, y);
+  powersOfPowers[1] = powers[k];
+  for (long i = 2; i < m; i++) {
+      mul(powersOfPowers[i], powersOfPowers[i - 1], powersOfPowers[i - 1]);
   }
 
-  // The first chunk
-  output = YASHE_CT(poly[0], y);
-  YASHE_CT product;
-  for (long i = 0; i < std::min(sqrtDegree - 1, long(poly.size()) - 1); i++) {
-    mul(product, poly[i + 1], powers[i]);
-    add(output, output, product);
-  }
+  std::cout << "computed powers of powers!" << std::endl;
+  
+  // recurse
+  polyRecursion(output, poly, powers, powersOfPowers);
 
-  long maxChunk = sqrtDegree;
-  while (poly.size() - 1 < sqrtDegree * maxChunk) {
-    maxChunk -= 1;
-  }
-
-  // The other chunks
-  for (long chunk = 0; chunk < maxChunk; chunk++) {
-    YASHE_CT subTotal(poly[(chunk + 1) * sqrtDegree], y);
-    for (long i = 0; 
-         i < std::min(sqrtDegree - 1, long(poly.size()) - 1 - (chunk + 1) * sqrtDegree);
-         i++) {
-      mul(product, poly[i + 1 + (chunk + 1) * sqrtDegree], powers[i]);
-      add(subTotal, subTotal, product);
-    }
-    mul(product, subTotal, powersOfPowers[chunk]);
-    add(output, output, product);
-  }
+  // implimenting for sparse polynomials?? do we actually need to compute every power?
+  // just a couple of the k multiplications unessesary...
 }
+ 
 
 /**
  * Division is computed by taking note of the following equality
@@ -256,8 +316,8 @@ void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
   };
 
 
-  std::vector<long> logPoly = Functions::functionToPoly(divLog, t);
-  std::vector<long> expPoly = Functions::functionToPoly(divExp, t);
+  NTL::ZZ_pX logPoly = Functions::functionToPoly(divLog, t);
+  NTL::ZZ_pX expPoly = Functions::functionToPoly(divExp, t);
 
   YASHE_CT exponentA, exponentB;
 

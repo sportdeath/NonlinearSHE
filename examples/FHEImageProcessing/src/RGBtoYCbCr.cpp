@@ -8,6 +8,8 @@
 #include <YASHE/cipherText.hpp>
 #include <YASHE/functions.hpp>
 
+#include <NTL/ZZ_pX.h>
+
 #include "imageFunctions.hpp"
 
 std::function<long(long)> multiplyByConstant(double c) {
@@ -82,15 +84,15 @@ int main(int argc, char * argv[]) {
 
   // The function is converted into
   // a polynomial of degree t = 257
-  std::vector<long> YR = Functions::functionToPoly(multiplyByConstant(0.299), 257);
-  std::vector<long> YG = Functions::functionToPoly(multiplyByConstant(0.587), 257);
-  std::vector<long> YB = Functions::functionToPoly(multiplyByConstant(0.114), 257);
-  std::vector<long> CbR = Functions::functionToPoly(multiplyByConstant(-0.169), 257);
-  std::vector<long> CbG = Functions::functionToPoly(multiplyByConstant(-0.331), 257);
-  std::vector<long> CbB = Functions::functionToPoly(multiplyByConstant(0.500), 257);
-  std::vector<long> CrR = Functions::functionToPoly(multiplyByConstant(0.500), 257);
-  std::vector<long> CrG = Functions::functionToPoly(multiplyByConstant(-0.419), 257);
-  std::vector<long> CrB = Functions::functionToPoly(multiplyByConstant(-0.081), 257);
+  NTL::ZZ_pX YR = Functions::functionToPoly(multiplyByConstant(0.299), 257);
+  NTL::ZZ_pX YG = Functions::functionToPoly(multiplyByConstant(0.587), 257);
+  NTL::ZZ_pX YB = Functions::functionToPoly(multiplyByConstant(0.114), 257);
+  NTL::ZZ_pX CbR = Functions::functionToPoly(multiplyByConstant(-0.169), 257);
+  NTL::ZZ_pX CbG = Functions::functionToPoly(multiplyByConstant(-0.331), 257);
+  NTL::ZZ_pX CbB = Functions::functionToPoly(multiplyByConstant(0.500), 257);
+  NTL::ZZ_pX CrR = Functions::functionToPoly(multiplyByConstant(0.500), 257);
+  NTL::ZZ_pX CrG = Functions::functionToPoly(multiplyByConstant(-0.419), 257);
+  NTL::ZZ_pX CrB = Functions::functionToPoly(multiplyByConstant(-0.081), 257);
 
   start = clock();
 
