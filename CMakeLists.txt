@@ -57,7 +57,6 @@ if(NOT Boost_FOUND)
   message(ERROR " Boost not found!")
 endif(NOT Boost_FOUND)
 
-
 ####################
 ## Library Creation
 ####################

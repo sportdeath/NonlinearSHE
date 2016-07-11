@@ -90,7 +90,7 @@ void NumberTheory::CRT(
   NTL::ZZ_pX fInv, fInvInv;
 
   for (long i = 0; i < numFactors; i++) {
-    div(fInv, modulusM, factors[i]);
+    div(fInv, modulus, factors[i]);
     rem(fInvInv, fInv, factors[i]);
     InvMod(fInvInv, fInvInv, factors[i]);
 

@@ -43,8 +43,15 @@ YASHE::YASHE(long pModulus_,
   modulusRatio = NTL::conv<NTL::ZZ_p>(cModulus/pModulus);
   bigModulus = (cModulus * cModulus)/pModulus;
 
-  maxDegree = NumberTheory::eulerToitient(cyclotomicDegree) - 1;
-  cycloModX = NumberTheory::cyclotomicPoly(cyclotomicDegree);
+  if (NumberTheory::eulerToitient(cyclotomicDegree) < cModulus) {
+    maxDegree = NumberTheory::eulerToitient(cyclotomicDegree) - 1;
+    cycloModX = NumberTheory::cyclotomicPoly(cyclotomicDegree);
+  } else {
+    long smallCModulus = rem(cModulus, LONG_MAX);
+    maxDegree = smallCModulus - 1;
+    cycloModX = NTL::ZZX(NTL::INIT_MONO, smallCModulus) - 1;
+  }
+
   cycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(cycloModX));
 
   {
@@ -122,6 +129,10 @@ NTL::ZZ_p YASHE::getModulusRatio() {
 
 long YASHE::getMaxDegree() {
   return maxDegree;
+}
+
+NTL::ZZX YASHE::getCycloModX() {
+  return cycloModX;
 }
 
 NTL::ZZ_pXModulus YASHE::getCycloMod() {
@@ -217,8 +228,8 @@ void YASHE::dot(NTL::ZZ_pX& output,
   for (long i = 0; i < decompSize; i++) {
     NTL::MulMod(product, a[i], b[i], cycloMod);
     output += product;
-    NTL::rem(output, output, cycloMod);
   }
+  NTL::rem(output, output, cycloMod);
 }
 
 
@@ -356,10 +367,11 @@ NTL::ZZ_pX YASHE::keyGen() {
    * an invertible key f^-1 is found
    */
   NTL::ZZ_pX secretKey, secretKeyInv;
+  long inverseStatus;
   do {
     secretKey = pModulus * randomKeyPoly() + 1;
-    secretKeyInv = PowerMod(secretKey, -1, cycloMod);
-  } while (MulMod(secretKey, secretKeyInv, cycloMod) != NTL::ZZ_pX(1));
+    inverseStatus = InvModStatus(secretKeyInv, secretKey, cycloMod);
+  } while (inverseStatus == 1);
 
   /**
    * The public key is computed by

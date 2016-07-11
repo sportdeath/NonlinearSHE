@@ -26,10 +26,13 @@ class YASHE8BitTest : public ::testing::Test {
 };
 
 long YASHE8BitTest::t = 257;
-NTL::ZZ YASHE8BitTest::q = NTL::GenPrime_ZZ(500);
-long YASHE8BitTest::d = 512; // 22016= 2^9*43 - 5376 irreducible factors
+NTL::ZZ YASHE8BitTest::q = NTL::GenPrime_ZZ(800);
+long YASHE8BitTest::d = 512; // This parameter is set low so tests are faster
+                             // it must be ~ 20000 for a security parameter of 128
+                             // 22016 = 2^9 * 43 works well as it has 5376
+                             // distinct factors - giving it a batch of that size.
 long YASHE8BitTest::sigma = 8;
-NTL::ZZ YASHE8BitTest::w = NTL::power2_ZZ(70);
+NTL::ZZ YASHE8BitTest::w = NTL::power2_ZZ(200);
 YASHE YASHE8BitTest::SHE = YASHE(t,q,d,sigma,w);
 NTL::ZZ_pX YASHE8BitTest::secretKey = SHE.keyGen();
 
@@ -149,7 +152,10 @@ TEST_F(YASHE8BitTest, DecompPowers) {
   NTL::ZZ_pX testPoly1 = SHE.randomErrPoly();
   NTL::ZZ_pX testPoly2 = SHE.randomErrPoly();
 
-  NTL::ZZ_pX mulPoly = NTL::MulMod(testPoly1, testPoly2, SHE.getCycloMod());
+  NTL::ZZ_pXModulus cycloMod(NTL::conv<NTL::ZZ_pX>(SHE.getCycloModX()));
+
+  NTL::ZZ_pX mulPoly;
+  NTL::MulMod(mulPoly, testPoly1, testPoly2, cycloMod);
 
   std::vector<NTL::ZZ_pX> powers, decomp;
   SHE.powersOfRadix(powers, testPoly1);
@@ -390,7 +396,11 @@ TEST_F(YASHE8BitTest, DivisionByConstantBatch) {
 
   YASHE_CT ciphertext = SHE.encryptBatch(message);
 
-  long constant = rand() % t;
+  long constant = 0;
+  while (constant == 0) {
+   constant = rand() % t;
+  }
+
   std::vector<long> poly = 
     Functions::functionToPoly(Functions::divideByConstant(constant), t);
 
@@ -411,7 +421,10 @@ TEST_F(YASHE8BitTest, DivisionBatch) {
 
   for (long i = 0; i < SHE.getNumFactors(); i++) {
     message1[i] = rand() % t;
-    message2[i] = rand() % t;
+    message2[i] = 0;
+    while (message2[i] == 0) {
+      message2[i] = rand() % t;
+    }
   }
 
   YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
@@ -428,6 +441,7 @@ TEST_F(YASHE8BitTest, DivisionBatch) {
 }
 
 int main(int argc, char ** argv) {
+  //::testing::GTEST_FLAG(filter) = "*DecompPowers*";
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

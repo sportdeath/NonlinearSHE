@@ -139,6 +139,7 @@ class YASHE {
     NTL::ZZ_p getModulusRatio();
     long getNumFactors();
     long getMaxDegree();
+    NTL::ZZX getCycloModX();
     NTL::ZZ_pXModulus getCycloMod();
     NTL::ZZ_pXModulus getBigCycloMod();
 
