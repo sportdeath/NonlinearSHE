@@ -4,11 +4,11 @@
 
 #include <CImg.h>
 
-#include "../source/yashe.hpp"
-#include "../source/cipherText.hpp"
-#include "../source/functions.hpp"
-#include "imageFunctions.hpp"
+#include <YASHE/YASHE.hpp>
+#include <YASHE/cipherText.hpp>
+#include <YASHE/functions.hpp>
 
+#include "imageFunctions.hpp"
 
 std::function<long(long)> multiplyByConstant(double c) {
   return [c] (long input) {
@@ -47,7 +47,7 @@ int main(int argc, char * argv[]) {
 
   // Generate parameters for the YASHE protocol
   // and create environment.
-  YASHE SHE = YASHE::readFromFile("8BitFHE");
+  YASHE SHE = YASHE::readFromFile("resources/8BitFHE");
 
   end = clock();
   std::cout << "Reading parameters completed in "

@@ -4,9 +4,10 @@
 
 #include <CImg.h>
 
-#include "../source/yashe.hpp"
-#include "../source/cipherText.hpp"
-#include "../source/functions.hpp"
+#include <YASHE/YASHE.hpp>
+#include <YASHE/cipherText.hpp>
+#include <YASHE/functions.hpp>
+
 #include "imageFunctions.hpp"
 
 /**
@@ -39,7 +40,7 @@ int main(int argc, char * argv[]) {
 
   // Generate parameters for the YASHE protocol
   // and create environment.
-  YASHE SHE = YASHE::readFromFile("../resources/8BitFHE");
+  YASHE SHE = YASHE::readFromFile("resources/8BitFHE");
   //long t = 257;
   //NTL::ZZ q = NTL::GenPrime_ZZ(400);
   //long d = 22016; // 2^9*43 - 5376 factors

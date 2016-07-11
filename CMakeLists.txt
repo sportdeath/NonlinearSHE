@@ -101,3 +101,12 @@ endmacro()
 MAKE_TEST(functions_test)
 MAKE_TEST(numberTheory_test)
 MAKE_TEST(yashe_test)
+
+######################
+## Building examples
+######################
+
+option(BUILD_EXAMPLES "BUILD_EXAMPLES" OFF)
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif(BUILD_EXAMPLES)
