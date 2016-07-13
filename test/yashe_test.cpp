@@ -26,8 +26,8 @@ class YASHE8BitTest : public ::testing::Test {
 };
 
 long YASHE8BitTest::t = 257;
-NTL::ZZ YASHE8BitTest::q = NTL::GenPrime_ZZ(800);
-long YASHE8BitTest::d = 512; // This parameter is set low so tests are faster
+NTL::ZZ YASHE8BitTest::q = NTL::GenPrime_ZZ(1000);
+long YASHE8BitTest::d = 2048; // This parameter is set low so tests are faster
                              // it must be ~ 20000 for a security parameter of 128
                              // 22016 = 2^9 * 43 works well as it has 5376
                              // distinct factors - giving it a batch of that size.
@@ -64,7 +64,7 @@ TEST_F(YASHE8BitTest, RandomErrPolyBounds) {
 }
 
 
-TEST_F(YASHE8BitTest, RandomERRPolyDifferent) {
+TEST_F(YASHE8BitTest, RandomErrPolyDifferent) {
   NTL::ZZ_pX randPoly1 = SHE.randomErrPoly();
   NTL::ZZ_pX randPoly2 = SHE.randomErrPoly();
 
@@ -436,12 +436,25 @@ TEST_F(YASHE8BitTest, DivisionBatch) {
 
   ASSERT_EQ(decryption.size(), SHE.getNumFactors());
 
-  for (long i = 0; i < decryption.size(); i++)
+  long numOfErrors = 0;
+  long maxError = 0;
+  for (long i = 0; i < decryption.size(); i++) {
+    if (message1[i]/message2[i] != decryption[i]) {
+      long error = std::abs(message1[i]/message2[i] - decryption[i]);
+      std::cout << message1[i] << "/" << message2[i] << "!=" << decryption[i]
+        << "\t\t error = " << error << std::endl;
+      numOfErrors += 1;
+    }
     ASSERT_NEAR(message1[i]/message2[i] , decryption[i], 5);
+  }
+  std::cout << "Total errors: " << numOfErrors << "/" 
+    << SHE.getNumFactors() << "=" 
+    << 100*numOfErrors/double(SHE.getNumFactors()) << "%" << std::endl;
+
 }
 
 int main(int argc, char ** argv) {
-  //::testing::GTEST_FLAG(filter) = "*DecompPowers*";
+  //::testing::GTEST_FLAG(filter) = "*DivisionBatch*";
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

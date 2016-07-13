@@ -242,7 +242,6 @@ void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
     return output;
   };
 
-
   std::function<long(long)> divExp = [t, base](long input) {
     double maxInt = log(t)/log(base);
     double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
@@ -254,7 +253,6 @@ void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
       return long(pow(base, actualValue));
     }
   };
-
 
   std::vector<long> logPoly = Functions::functionToPoly(divLog, t);
   std::vector<long> expPoly = Functions::functionToPoly(divExp, t);
