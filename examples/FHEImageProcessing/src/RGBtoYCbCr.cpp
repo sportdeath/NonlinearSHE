@@ -82,15 +82,15 @@ int main(int argc, char * argv[]) {
 
   // The function is converted into
   // a polynomial of degree t = 257
-  std::vector<long> YR = Functions::functionToPoly(multiplyByConstant(0.299), 257);
-  std::vector<long> YG = Functions::functionToPoly(multiplyByConstant(0.587), 257);
-  std::vector<long> YB = Functions::functionToPoly(multiplyByConstant(0.114), 257);
-  std::vector<long> CbR = Functions::functionToPoly(multiplyByConstant(-0.169), 257);
-  std::vector<long> CbG = Functions::functionToPoly(multiplyByConstant(-0.331), 257);
-  std::vector<long> CbB = Functions::functionToPoly(multiplyByConstant(0.500), 257);
-  std::vector<long> CrR = Functions::functionToPoly(multiplyByConstant(0.500), 257);
-  std::vector<long> CrG = Functions::functionToPoly(multiplyByConstant(-0.419), 257);
-  std::vector<long> CrB = Functions::functionToPoly(multiplyByConstant(-0.081), 257);
+  std::vector<long> YR = Functions::functionToPoly(multiplyByConstant(0.257), 257);
+  std::vector<long> YG = Functions::functionToPoly(multiplyByConstant(0.504), 257);
+  std::vector<long> YB = Functions::functionToPoly(multiplyByConstant(0.098), 257);
+  std::vector<long> CbR = Functions::functionToPoly(multiplyByConstant(-0.148), 257);
+  std::vector<long> CbG = Functions::functionToPoly(multiplyByConstant(-0.291), 257);
+  std::vector<long> CbB = Functions::functionToPoly(multiplyByConstant(0.439), 257);
+  std::vector<long> CrR = Functions::functionToPoly(multiplyByConstant(0.439), 257);
+  std::vector<long> CrG = Functions::functionToPoly(multiplyByConstant(-0.368), 257);
+  std::vector<long> CrB = Functions::functionToPoly(multiplyByConstant(-0.071), 257);
 
   start = clock();
 
@@ -138,6 +138,7 @@ int main(int argc, char * argv[]) {
   YASHE_CT cY, cCb, cCr;
   YASHE_CT::add(cY, cYR, cYG);
   YASHE_CT::add(cY, cY, cYB);
+  YASHE_CT::add(cY, cY, 16);
 
   YASHE_CT::add(cCb, cCbR, cCbG);
   YASHE_CT::add(cCb, cCb, cCbB);
