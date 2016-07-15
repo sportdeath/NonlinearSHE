@@ -317,6 +317,43 @@ void YASHE::roundMultiply(NTL::ZZ_pX& output,
   }
 }
 
+
+void YASHE::roundMultiply(NTL::ZZ_pX& output,
+                          const NTL::ZZ_pXMultiplier& a,
+                          const NTL::ZZ_pXMultiplier& b) {
+  // maximum is q^2 * (maxDegree + 1)
+  NTL::ZZ_pPush push((cModulus * cModulus)/pModulus);
+
+  long n = bigCycloMod.n;
+  NTL::ZZ_pX product, P1(NTL::INIT_SIZE, n), P2(NTL::INIT_SIZE, n);
+  NTL::FFTRep R1(NTL::INIT_SIZE, bigCycloMod.l), R2(NTL::INIT_SIZE, bigCycloMod.l);
+
+  ToFFTRep(R1, a.val(), bigCycloMod.l);
+  mul(R2, R1, b.B1);
+  FromFFTRep(P1, R2, n-1, 2*n-3);
+
+  mul(R1, a.B2, b.B2);
+  ToFFTRep(R2, P1, bigCycloMod.k);
+  mul(R2, R2, bigCycloMod.FRep);
+  sub(R1, R1, R2);
+
+  FromFFTRep(product, R1, 0, n-1);
+
+  output.SetLength(maxDegree + 1);
+  NTL::ZZ quotient, remainder;
+
+  for (long i = 0; i <= maxDegree; i++) {
+    DivRem(quotient, remainder, pModulus * rep(product[i]), cModulus);
+
+    // Rounding using remainder
+    if (remainder * 2 > cModulus) {
+      quotient += 1;
+    }
+
+    output[i] = NTL::conv<NTL::ZZ_p>(quotient);
+  }
+}
+
 void YASHE::roundDecryptVec(NTL::ZZ_pX& output,
                             const NTL::ZZ_pX& a,
                             const NTL::ZZ_pX& b) {

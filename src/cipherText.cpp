@@ -61,7 +61,9 @@ void YASHE_CT::sub(YASHE_CT& output, const YASHE_CT& a, const YASHE_CT& b) {
 void YASHE_CT::mul(YASHE_CT& output, const YASHE_CT& a, const YASHE_CT& b) {
   // If the multiplier exists, performing multiplication
   // is much faster.
-  if (a.isMultiplier) {
+  if (a.isMultiplier and b.isMultiplier) {
+    a.y -> roundMultiply(output.poly, a.multiplier, b.multiplier);
+  } else if (a.isMultiplier) {
     a.y -> roundMultiply(output.poly, b.poly, a.multiplier);
   } else if (b.isMultiplier) {
     a.y -> roundMultiply(output.poly, a.poly, b.multiplier);
@@ -175,6 +177,7 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
     }
     depth[i] = minimumDepth + 1;
     mul(powersOfPowers[i], powersOfPowers[minimumIndex], powersOfPowers[i - minimumIndex - 1]);
+    powersOfPowers[i].generateMultiplier();
   }
 
   // The first chunk

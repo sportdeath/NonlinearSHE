@@ -220,6 +220,7 @@ class YASHE {
      * This is faster than regular round multiplication
      */
     void roundMultiply(NTL::ZZ_pX& output, const NTL::ZZ_pX& a, const NTL::ZZ_pXMultiplier& b);
+    void roundMultiply(NTL::ZZ_pX& output, const NTL::ZZ_pXMultiplier& a, const NTL::ZZ_pXMultiplier& b);
 
     /**
      * Performs the round decryption step
