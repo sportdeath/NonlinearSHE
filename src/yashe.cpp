@@ -66,6 +66,15 @@ YASHE::YASHE(long pModulus_,
     for (long i = 0; i < factors_.length(); i++) {
       factors[i] = factors_[i];
     }
+
+    crtElements.resize(factors.size());
+    NTL::ZZ_pX fInv, fInvInv;
+    for (long i = 0; i < factors.size(); i++) {
+      div(fInv, NTL::conv<NTL::ZZ_pX>(cycloModX), factors[i]);
+      rem(fInvInv, fInv, factors[i]);
+      InvMod(fInvInv, fInvInv, factors[i]);
+      crtElements[i] = MulMod(fInv, fInvInv, pModulusX);
+    }
   }
 
   {
@@ -100,6 +109,22 @@ YASHE YASHE::readFromFile(std::string filename) {
     NTL::ZZ_pPush push(output.bigModulus); // switch to multiplication modulus
     // make another modulus for fast multiplication
     output.bigCycloMod = NTL::ZZ_pXModulus(NTL::conv<NTL::ZZ_pX>(output.cycloModX));
+  }
+  {
+    NTL::ZZ_pPush push(output.bigPModulus); // switch to plain text modulus
+    // Factor the cyclotomic polynomial modulo t
+    // for batch encryption
+    NTL::ZZ_pXModulus pModulusX;
+    NTL::build(pModulusX, NTL::conv<NTL::ZZ_pX>(output.cycloModX));
+
+    output.crtElements.resize(output.factors.size());
+    NTL::ZZ_pX fInv, fInvInv;
+    for (long i = 0; i < output.factors.size(); i++) {
+      div(fInv, NTL::conv<NTL::ZZ_pX>(output.cycloModX), output.factors[i]);
+      rem(fInvInv, fInv, output.factors[i]);
+      InvMod(fInvInv, fInvInv, output.factors[i]);
+      output.crtElements[i] = MulMod(fInv, fInvInv, pModulusX);
+    }
   }
   return output;
 }
@@ -471,7 +496,7 @@ YASHE_CT YASHE::encryptBatch(std::vector<long> messages) {
   // single polynomial.
   {
     NTL::ZZ_pPush push(bigPModulus);
-    NumberTheory::CRT(smallOutput, messages, NTL::conv<NTL::ZZ_pX>(cycloModX), factors);
+    NumberTheory::CRTwithElements(smallOutput, messages, NTL::conv<NTL::ZZ_pX>(cycloModX), crtElements);
   }
 
   NTL::ZZ_pX output = NTL::conv<NTL::ZZ_pX>(NTL::conv<NTL::ZZX>(smallOutput));

@@ -35,4 +35,13 @@ target_link_libraries(
   ${LIBS}
 )
 
+add_executable(mean
+               src/mean.cpp
+               ${PROJECT_SOURCES}
+)
+target_link_libraries(
+  mean
+  ${LIBS}
+)
+
 file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
