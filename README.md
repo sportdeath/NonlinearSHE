@@ -43,10 +43,14 @@ it into YCbCr channels and displays the result.
 ./RGBtoYCbCr resources/mona.png
 ```
 For an image with no more than 5376 pixels represented in 24-bit color and a security parameter of 128, this process completes in under 4 minutes:
+
 * 30 seconds to generate the YASHE parameters (requires polynomial factorization)
 * 15 seconds to encrypt the image
 * 155 seconds to compute the homomorphic transformation
 * 30 seconds to decrypt the image
+
+The input file displayed next to the individual channels Y, Cb, and Cr of the output and their combination
+![RGB to YCbCr](https://bitbucket.org/repo/9B6qdo/images/4278353611-Screen%20Shot%202016-08-02%20at%2010.46.45.png)
 
 ###Applying a HSV filter to an RGB image
 The following example encrypts an image as 8 bit RGB and then homomorphically transforms it
@@ -55,14 +59,20 @@ into HSV (hue, saturation, value). Then it rotates the hue and transforms the im
 ./imageTransform resources/marilyn8Bit.png
 ```
 Since this example only uses 8 bit color, it is significantly faster than the other examples and completes in under a minute:
-* 30 seconds to encrypt the image\\
+
+* 30 seconds to encrypt the image
 * 17 seconds to compute the homomorphic transformation
 * 9 seconds to decrypt the image
+
+The input image displayed next to the output image:
+
+![Screen Shot 2016-08-02 at 10.49.51.png](https://bitbucket.org/repo/9B6qdo/images/4077315096-Screen%20Shot%202016-08-02%20at%2010.49.51.png)
 
 ###Taking the mean of two images
 The following example encrypts two images as 24-bit RGB images, then takes the mean of their pixel values and displays the result.
 ```bash
 ./mean resources/mona.png resources/lena.jpg 
 ```
-The result is computed in about 3 minutes
+The result is computed in about 3 minutes. The input images displayed next to the output image:
+
 ![Screen Shot 2016-08-02 at 10.40.10.png](https://bitbucket.org/repo/9B6qdo/images/4206462266-Screen%20Shot%202016-08-02%20at%2010.40.10.png)
