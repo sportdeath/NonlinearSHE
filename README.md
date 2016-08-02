@@ -55,7 +55,7 @@ into HSV (hue, saturation, value). Then it rotates the hue and transforms the im
 ./imageTransform resources/marilyn8Bit.png
 ```
 Since this example only uses 8 bit color, it is significantly faster than the other examples and completes in under a minute:
-* 30 seconds to encrypt the image
+* 30 seconds to encrypt the image\\
 * 17 seconds to compute the homomorphic transformation
 * 9 seconds to decrypt the image
 
