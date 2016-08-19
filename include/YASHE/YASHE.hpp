@@ -107,13 +107,21 @@ class YASHE {
      */
     YASHE(
           long pModulus_,    // Plain text modulus t
-          NTL::ZZ cModulus_, // Cipher text modulus q
+          long log2CModulus_, // Cipher text modulus q
           long cyclotomicDegree_, // the index of the cyclotomic polynomial
           long stdDev_,      // Standard deviation of the gaussian distribution
-          NTL::ZZ radix_        // base of decomposition
+          long log2Radix_        // base of decomposition
         );
 
     YASHE();
+
+    static std::string getFileName(
+          long pModulus_,    // Plain text modulus t
+          long log2CModulus_, // Cipher text modulus q
+          long cyclotomicDegree_, // the index of the cyclotomic polynomial
+          long stdDev_,      // Standard deviation of the gaussian distribution
+          long log2Radix_        // base of decomposition
+        );
 
     /**
      * A constructor that reads the class

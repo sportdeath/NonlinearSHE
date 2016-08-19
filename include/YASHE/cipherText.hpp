@@ -89,6 +89,8 @@ class YASHE_CT {
      * Computes homomorphic division
      */
     static void div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b);
+
+    static void geq(YASHE_CT& output, YASHE_CT& x, YASHE_CT& y);
 };
 
 #endif

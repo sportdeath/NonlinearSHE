@@ -101,6 +101,7 @@ endmacro()
 MAKE_TEST(functions_test)
 MAKE_TEST(numberTheory_test)
 MAKE_TEST(yashe_test)
+MAKE_TEST(timing_test)
 
 ######################
 ## Building examples

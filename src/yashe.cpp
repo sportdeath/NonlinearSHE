@@ -29,14 +29,45 @@ YASHE::YASHE() {
   randGen = std::mt19937(time(0));
 }
 
+std::string YASHE::getFileName(
+    long pModulus,
+    long log2CModulus,
+    long cyclotomicDegree,
+    long stdDev_,
+    long log2Radix) {
+
+  return 
+    "t-" 
+    + std::to_string(pModulus) 
+    + "_log2Q-"
+    + std::to_string(log2CModulus)
+    + "_d-"
+    + std::to_string(cyclotomicDegree)
+    + "_sigma-"
+    + std::to_string(stdDev_)
+    + "_log2W-"
+    + std::to_string(log2Radix)
+    + ".yashe";
+}
+
 
 YASHE::YASHE(long pModulus_,
-             NTL::ZZ cModulus_,
+             long log2CModulus,
              long cyclotomicDegree,
              long stdDev_,
-             NTL::ZZ radix_) {
+             long log2Radix) {
+  // Check if already written
+  {
+    std::string name = getFileName(pModulus_, log2CModulus, cyclotomicDegree, stdDev_, log2Radix);
+    std::ifstream f(name.c_str());
+    if (f.good()) {
+      *this = readFromFile(name);
+      return;
+    }
+  }
+
   pModulus = pModulus_;
-  cModulus = cModulus_;
+  cModulus = NTL::GenPrime_ZZ(log2CModulus);
   bigPModulus = NTL::ZZ(pModulus);
 
   NTL::ZZ_p::init(cModulus);
@@ -84,11 +115,12 @@ YASHE::YASHE(long pModulus_,
   }
 
   stdDev = stdDev_;
-  radix = radix_;
+  radix = NTL::power2_ZZ(log2Radix);
   decompSize = log(cModulus)/log(radix) + 1; // log_w(q) + 1
 
   randGen = std::mt19937(time(0));
 
+  writeToFile(getFileName(pModulus, log2CModulus, cyclotomicDegree, stdDev, log2Radix));
 }
 
 

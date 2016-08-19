@@ -117,7 +117,9 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
 
   YASHE * y = input.y;
 
-  long sqrtDegree = sqrt(poly.size() - 1);
+  long sqrtDegree = sqrt(poly.size() + 1);
+
+
 
   while ( (sqrtDegree + 1) * sqrtDegree < poly.size()) {
     sqrtDegree += 1;
@@ -152,6 +154,8 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
     mul(powers[i], powers[minimumIndex], powers[i - minimumIndex -1]);
   }
 
+  long totalDepth = depth[sqrtDegree - 1];
+
   // A vector of x^sqrtDegree, x^2sqrtDegree ... x^degree
   std::vector<YASHE_CT> powersOfPowers(sqrtDegree);
   powersOfPowers[0] = powers[sqrtDegree - 1];
@@ -179,6 +183,10 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
     mul(powersOfPowers[i], powersOfPowers[minimumIndex], powersOfPowers[i - minimumIndex - 1]);
     powersOfPowers[i].generateMultiplier();
   }
+
+  totalDepth += depth[sqrtDegree - 1];
+
+  std::cout << "Multiplicative Depth: " << totalDepth + 1 << std::endl;
 
   // The first chunk
   output = YASHE_CT(poly[0], y);
@@ -228,32 +236,34 @@ void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
   // wrapping modulo p). The rest - log2(p) - log2(log2(p)) - 1
   // bits are for floating point operations. 
   long t = a.y -> getPModulus();
-  double base = 2.02;
+  //double base = 2.02;
 
-  std::function<long(long)> divLog = [t, base](long input) {
+  std::function<long(long)> divLog = [t](long input) {
 
     if (input == 0) {
       return long(0);
+    } else {
+      return long(round(t/2.*log(input)/log(t)));
     }
 
-    double logInput = log(input)/log(base);
+    //double logInput = log(input)/log(base);
 
-    double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
+    //double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
 
-    long output = round(logInput * pow(base, shiftAmmount));
+    //long output = round(logInput * pow(base, shiftAmmount));
 
-    return output;
+    //return output;
   };
 
-  std::function<long(long)> divExp = [t, base](long input) {
-    double maxInt = log(t)/log(base);
-    double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
-    double actualValue = input / pow(base, shiftAmmount);
+  std::function<long(long)> divExp = [t](long input) {
+    //double maxInt = log(t)/log(base);
+    //double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
+    //double actualValue = input / pow(base, shiftAmmount);
 
-    if (actualValue > maxInt) {
+    if (input > t/2.) {
       return long(0);
     } else {
-      return long(pow(base, actualValue));
+      return long(round(pow(t, 2.* input/ double(t))));
     }
   };
 
@@ -269,3 +279,41 @@ void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
 
   evalPoly(output, exponentA, expPoly);
 }
+
+void YASHE_CT::geq(YASHE_CT & output, YASHE_CT & x, YASHE_CT & y) {
+  long t = x.y -> getPModulus();
+
+  std::function<long(long)> geqFunc = [t](long input) {
+    return input >= (t - 1)/2.;
+  };
+
+  std::function<long(long)> leqFunc = [t](long input) {
+    return input <= (t - 1)/2.;
+  };
+
+  std::vector<long> geqPoly = Functions::functionToPoly(geqFunc, t);
+  std::vector<long> leqPoly = Functions::functionToPoly(leqFunc, t);
+
+  YASHE_CT a, b, c, ab;
+
+  evalPoly(a, x, geqPoly);
+  evalPoly(b, y, leqPoly);
+
+  sub(c, x, y);
+
+  evalPoly(c, c, leqPoly);
+
+  mul(ab, a, b);
+  mul(output, -2, ab); // -2ab
+  add(output, a, output); //a -2ab
+  add(output, b, output); //a + b -2ab
+  mul(output, c, output); // c(a+b-2ab)
+  add(output, ab, output); // ab + c(a+b-2ab)
+}
+
+
+
+
+
+
+

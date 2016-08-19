@@ -70,4 +70,5 @@ Thumbs.db
 
 # Vim #
 #######
-.swp
+*.swp
+*.swo
