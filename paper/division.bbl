@@ -1,0 +1,45 @@
+\begin{thebibliography}{1}
+
+\bibitem{yashe}
+Joppe~W. Bos, Kristin Lauter, Jake Loftus, and Michael Naehrig.
+\newblock Improved security for a ring-based fully homomorphic encryption
+  scheme.
+\newblock Cryptology ePrint Archive, Report 2013/075, 2013.
+\newblock \url{http://eprint.iacr.org/2013/075}.
+
+\bibitem{newton}
+Gizem~S. Cetin, Yarkin Doroz, Berk Sunar, and William~J. Martin.
+\newblock Arithmetic using word-wise homomorphic encryption.
+\newblock Cryptology ePrint Archive, Report 2015/1195, 2015.
+\newblock \url{http://eprint.iacr.org/2015/1195}.
+
+\bibitem{homenc}
+Craig Gentry.
+\newblock {\em A fully homomorphic encryption scheme}.
+\newblock PhD thesis, Stanford University, 2009.
+\newblock \url{crypto.stanford.edu/craig}.
+
+\bibitem{firstImp}
+Craig Gentry and Shai Halevi.
+\newblock Implementing gentry's fully-homomorphic encryption scheme.
+\newblock Cryptology ePrint Archive, Report 2010/520, 2010.
+\newblock \url{http://eprint.iacr.org/2010/520}.
+
+\bibitem{comparison}
+Tancrède Lepoint and Michael Naehrig.
+\newblock A comparison of the homomorphic encryption schemes fv and yashe.
+\newblock Cryptology ePrint Archive, Report 2014/062, 2014.
+\newblock \url{http://eprint.iacr.org/2014/062}.
+
+\bibitem{paterson}
+Michael~S. Paterson and Larry~J. Stockmeyer.
+\newblock On the number of nonscalar multiplications necessary to evaluate
+  polynomials.
+\newblock {\em SIAM Journal on Computing}, 1973.
+
+\bibitem{ntl}
+Victor Shoup.
+\newblock {NTL}: {Number} {Theory} {Library}, 2016.
+\newblock \url{shoup.net/ntl/}.
+
+\end{thebibliography}

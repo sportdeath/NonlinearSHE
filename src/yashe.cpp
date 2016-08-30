@@ -176,6 +176,10 @@ NTL::ZZ YASHE::getCModulus() {
   return cModulus;
 }
 
+NTL::ZZ YASHE::getRadix() {
+  return radix;
+}
+
 NTL::ZZ YASHE::getBigModulus() {
   return bigModulus;
 }

@@ -55,6 +55,9 @@ int main(int argc, char * argv[]) {
             << " seconds"
             << std::endl;
 
+  std::cout << "log2q = " << NTL::NumBits(SHE.getCModulus()) << std::endl;
+  std::cout << "log2w = " << NTL::NumBits(SHE.getRadix()) << std::endl;
+
   std::cout << SHE.getNumFactors() << " factors." << std::endl;
 
   // Resize the image so we can pack it into a single

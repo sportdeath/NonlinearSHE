@@ -117,101 +117,60 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
 
   YASHE * y = input.y;
 
-  long sqrtDegree = sqrt(poly.size() + 1);
+  long t = poly.size() - 1;
 
-
-
-  while ( (sqrtDegree + 1) * sqrtDegree < poly.size()) {
-    sqrtDegree += 1;
-  }
+  // sqrt(t + 1)
+  long sqrtDegree = std::ceil(sqrt(t + 1));
 
   // A vector of all of the powers of the input
   // from 1 to sqrtDegree
-  std::vector<YASHE_CT> powers(sqrtDegree);
-  std::vector<long> depth(sqrtDegree);
-  powers[0] = input;
-  depth[0] = 0;
-  powers[0].generateMultiplier();
-  for (long i = 1; i < sqrtDegree; i++) {
-    long minimumDepth = sqrtDegree;
-    long secondaryDepth = sqrtDegree;
-    long minimumIndex = 0;
-    for (long j = 0; j < i/2 + 1; j++) {
-      long newDepth = std::max(depth[j],depth[i - j - 1]);
-      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
-      if (newDepth < minimumDepth) {
-        minimumDepth = newDepth;
-        minimumIndex = j;
-        secondaryDepth = newSecDepth;
-      } else if ( newDepth == minimumDepth) {
-        if (newSecDepth < secondaryDepth) {
-          minimumIndex = j;
-          secondaryDepth = newSecDepth;
-        }
-      }
-    }
-    depth[i] = minimumDepth + 1;
-    mul(powers[i], powers[minimumIndex], powers[i - minimumIndex -1]);
-  }
+  std::vector<YASHE_CT> powers(sqrtDegree + 1);
 
-  long totalDepth = depth[sqrtDegree - 1];
+  powers[0] = YASHE_CT(1, y);
+  powers[1] = input;
+  powers[0].generateMultiplier();
+  powers[1].generateMultiplier();
+
+  for (long i = 2; i <= sqrtDegree; i++) {
+    long leftIndex = std::floor(i/2.);
+    long rightIndex = std::ceil(i/2.);
+    mul(powers[i], powers[leftIndex], powers[rightIndex]);
+  }
 
   // A vector of x^sqrtDegree, x^2sqrtDegree ... x^degree
-  std::vector<YASHE_CT> powersOfPowers(sqrtDegree);
-  powersOfPowers[0] = powers[sqrtDegree - 1];
-  depth[0] = 0;
+  long maximumChunk = std::floor(t/double(sqrtDegree));
+
+  std::vector<YASHE_CT> powersOfPowers(maximumChunk + 1);
+  powersOfPowers[0] = YASHE_CT(1, y);
+  powersOfPowers[1] = powers[sqrtDegree];
   powersOfPowers[0].generateMultiplier();
-  for (long i = 1; i < sqrtDegree; i++) {
-    long minimumDepth = sqrtDegree;
-    long secondaryDepth = sqrtDegree;
-    long minimumIndex = 0;
-    for (long j = 0; j < i/2 + 1; j++) {
-      long newDepth = std::max(depth[j],depth[i - j - 1]);
-      long newSecDepth = std::min(depth[j],depth[i - j - 1]);
-      if (newDepth < minimumDepth) {
-        minimumDepth = newDepth;
-        minimumIndex = j;
-        secondaryDepth = newSecDepth;
-      } else if ( newDepth == minimumDepth) {
-        if (newSecDepth < secondaryDepth) {
-          minimumIndex = j;
-          secondaryDepth = newSecDepth;
-        }
+  powersOfPowers[1].generateMultiplier();
+
+  for (long i = 2; i <= maximumChunk; i++) {
+    long leftIndex = std::floor(i/2.);
+    long rightIndex = std::ceil(i/2.);
+    mul(powersOfPowers[i], powersOfPowers[leftIndex], powersOfPowers[rightIndex]);
+  }
+
+  // The max chunk
+  output = YASHE_CT(0, y);
+  for (long chunk = 0; chunk <= maximumChunk; chunk++) {
+
+    YASHE_CT subTotal(poly[chunk * sqrtDegree], y);
+
+    for (long i = 1; i < std::min(sqrtDegree, t - chunk*sqrtDegree + 1); i++) {
+      long coefficient = poly[chunk * sqrtDegree + i];
+      if (coefficient != 0) {
+        YASHE_CT product;
+        mul(product, poly[chunk * sqrtDegree + i], powers[i]);
+        add(subTotal, subTotal, product);
       }
     }
-    depth[i] = minimumDepth + 1;
-    mul(powersOfPowers[i], powersOfPowers[minimumIndex], powersOfPowers[i - minimumIndex - 1]);
-    powersOfPowers[i].generateMultiplier();
-  }
 
-  totalDepth += depth[sqrtDegree - 1];
-
-  std::cout << "Multiplicative Depth: " << totalDepth + 1 << std::endl;
-
-  // The first chunk
-  output = YASHE_CT(poly[0], y);
-  YASHE_CT product;
-  for (long i = 0; i < std::min(sqrtDegree - 1, long(poly.size()) - 1); i++) {
-    mul(product, poly[i + 1], powers[i]);
-    add(output, output, product);
-  }
-
-  long maxChunk = sqrtDegree;
-  while (poly.size() - 1 < sqrtDegree * maxChunk) {
-    maxChunk -= 1;
-  }
-
-  // The other chunks
-  for (long chunk = 0; chunk < maxChunk; chunk++) {
-    YASHE_CT subTotal(poly[(chunk + 1) * sqrtDegree], y);
-    for (long i = 0; 
-         i < std::min(sqrtDegree - 1, long(poly.size()) - 1 - (chunk + 1) * sqrtDegree);
-         i++) {
-      mul(product, poly[i + 1 + (chunk + 1) * sqrtDegree], powers[i]);
-      add(subTotal, subTotal, product);
+    if (chunk != 0) {
+      mul(subTotal, subTotal, powersOfPowers[chunk]);
     }
-    mul(product, subTotal, powersOfPowers[chunk]);
-    add(output, output, product);
+    add(output, output, subTotal);
   }
 }
 
@@ -229,41 +188,23 @@ void YASHE_CT::evalPoly(YASHE_CT& output,
  * is limited, the reduction is approximate.
  */
 void YASHE_CT::div(YASHE_CT& output, YASHE_CT& a, YASHE_CT& b) {
-  // When we compute the log of an input, we will
-  // need no more than log2(log2(p)) bits for integers
-  // 1 bit will be used to determine the denominator is
-  // greater than the numerator (preventing the exponent from
-  // wrapping modulo p). The rest - log2(p) - log2(log2(p)) - 1
-  // bits are for floating point operations. 
   long t = a.y -> getPModulus();
-  //double base = 2.02;
 
   std::function<long(long)> divLog = [t](long input) {
 
     if (input == 0) {
       return long(0);
     } else {
-      return long(round(t/2.*log(input)/log(t)));
+      return long(std::round(t/2.*log(input)/log(t)));
     }
-
-    //double logInput = log(input)/log(base);
-
-    //double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
-
-    //long output = round(logInput * pow(base, shiftAmmount));
-
-    //return output;
   };
 
   std::function<long(long)> divExp = [t](long input) {
-    //double maxInt = log(t)/log(base);
-    //double shiftAmmount = log(t)/log(base) - log(log(t)/log(base))/log(base) - 1;
-    //double actualValue = input / pow(base, shiftAmmount);
 
     if (input > t/2.) {
       return long(0);
     } else {
-      return long(round(pow(t, 2.* input/ double(t))));
+      return long(std::floor(pow(t, 2.* input/ double(t))));
     }
   };
 
@@ -310,10 +251,3 @@ void YASHE_CT::geq(YASHE_CT & output, YASHE_CT & x, YASHE_CT & y) {
   mul(output, c, output); // c(a+b-2ab)
   add(output, ab, output); // ab + c(a+b-2ab)
 }
-
-
-
-
-
-
-

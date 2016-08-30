@@ -413,6 +413,27 @@ TEST_F(YASHE8BitTest, DivisionByConstantBatch) {
     ASSERT_EQ(message[i]/constant , decryption[i]);
 }
 
+TEST_F(YASHE8BitTest, GEQBatch) {
+  std::vector<long> message1(SHE.getNumFactors());
+  std::vector<long> message2(SHE.getNumFactors());
+  for (long i = 0; i < SHE.getNumFactors(); i++) {
+    message1[i] = rand() % t;
+    message2[i] = rand() % t;
+  }
+
+  YASHE_CT ciphertext1 = SHE.encryptBatch(message1);
+  YASHE_CT ciphertext2 = SHE.encryptBatch(message2);
+
+  YASHE_CT::geq(ciphertext1, ciphertext1, ciphertext2);
+
+  std::vector<long> decryption = SHE.decryptBatch(ciphertext1, secretKey);
+
+  ASSERT_EQ(decryption.size(), SHE.getNumFactors());
+
+  for (long i = 0; i < decryption.size(); i++)
+    ASSERT_EQ(message1[i] >= message2[i], decryption[i]);
+}
+
 
 TEST_F(YASHE8BitTest, DivisionBatch) {
   std::vector<long> message1(SHE.getNumFactors());
@@ -439,7 +460,7 @@ TEST_F(YASHE8BitTest, DivisionBatch) {
   long maxError = 0;
   for (long i = 0; i < decryption.size(); i++) {
     if (message1[i]/message2[i] != decryption[i]) {
-      long error = std::abs(message1[i]/message2[i] - decryption[i]);
+      long error = message1[i]/message2[i] - decryption[i];
       std::cout << message1[i] << "/" << message2[i] << "!=" << decryption[i]
         << "\t\t error = " << error << std::endl;
       numOfErrors += 1;
@@ -449,7 +470,6 @@ TEST_F(YASHE8BitTest, DivisionBatch) {
   std::cout << "Total errors: " << numOfErrors << "/" 
     << SHE.getNumFactors() << "=" 
     << 100*numOfErrors/double(SHE.getNumFactors()) << "%" << std::endl;
-
 }
 
 int main(int argc, char ** argv) {

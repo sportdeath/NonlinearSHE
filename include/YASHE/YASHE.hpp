@@ -143,6 +143,7 @@ class YASHE {
      */
     long getPModulus();
     NTL::ZZ getCModulus();
+    NTL::ZZ getRadix();
     NTL::ZZ getBigModulus();
     NTL::ZZ_p getModulusRatio();
     long getNumFactors();
