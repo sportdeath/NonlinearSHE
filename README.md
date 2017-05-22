@@ -1,5 +1,10 @@
-# YASHE
-An implementation of the somewhat homomorphic encryption scheme [YASHE](https://eprint.iacr.org/2013/075.pdf).
+# NonlinearSHE
+
+An implimentation of the algorithms described in the included [paper](https://github.com/sportdeath/NonlinearSHE/raw/master/paper/paper.pdf).
+The algorithms allow for efficient computation of nonlinear functions, like division, boolean comparisons, logarithms and exponentials under homomorphic encryption.
+These computations are built solely from these multiplication and addition operations exposed by homomorphic encryption.
+The algorithms described and implimented are provably optimal as they meet an asymtotic lower bound on the number of multiplications performed, which is the bottleneck in most if not all homomorphic encryption schemes.
+The encryption scheme used is the somewhat homomorphic encryption scheme [YASHE](https://eprint.iacr.org/2013/075.pdf).
 
 ## Dependencies
 This library relies on the number theoretic library [NTL](http://www.shoup.net/ntl/) for large integer and polynomial math as well as [Boost](http://www.boost.org/) for serialization (storing and retrieving information from disk). Both are available through most pacakge managers (apt-get, pacman, brew). The library is built with [CMake](https://cmake.org/). The unit tests are evaluated with [Google Test](https://github.com/google/googletest), but the framework is downloaded on the fly through CMake and not required as a dependency.
@@ -36,7 +41,7 @@ A set of examples involving homomorphic image processing are located in the exam
 If the library has been made with `-DBUILD_EXAMPLES=ON`, they will be built to `build/examples/FHEImageProcessing`.
 Some appropriately sized pictures can be found in the `resources` subfolder.
 
-###Transforming an RGB image into a YCbCr image
+### Transforming an RGB image into a YCbCr image
 The following example encrypts an image as RGB channels and then homomorphically transforms
 it into YCbCr channels and displays the result.
 ```bash
@@ -50,9 +55,10 @@ For an image with no more than 5376 pixels represented in 24-bit color and a sec
 * 30 seconds to decrypt the image
 
 The input file displayed next to the individual channels Y, Cb, and Cr of the output and their combination
-![RGB to YCbCr](https://bitbucket.org/repo/9B6qdo/images/4278353611-Screen%20Shot%202016-08-02%20at%2010.46.45.png)
 
-###Applying a HSV filter to an RGB image
+![RGBtoYCbCr](https://github.com/sportdeath/NonlinearSHE/raw/master/images/RGBtoYCbCr.png)
+
+### Applying a HSV filter to an RGB image
 The following example encrypts an image as 8 bit RGB and then homomorphically transforms it
 into HSV (hue, saturation, value). Then it rotates the hue and transforms the image back to RGB and displays the result.
 ```bash
@@ -66,13 +72,13 @@ Since this example only uses 8 bit color, it is significantly faster than the ot
 
 The input image displayed next to the output image:
 
-![Screen Shot 2016-08-02 at 10.49.51.png](https://bitbucket.org/repo/9B6qdo/images/4077315096-Screen%20Shot%202016-08-02%20at%2010.49.51.png)
+![ColorTransform](https://github.com/sportdeath/NonlinearSHE/raw/master/images/ColorTransform.png)
 
-###Taking the mean of two images
+### Taking the mean of two images
 The following example encrypts two images as 24-bit RGB images, then takes the mean of their pixel values and displays the result.
 ```bash
 ./mean resources/mona.png resources/lena.jpg 
 ```
 The result is computed in about 3 minutes. The input images displayed next to the output image:
 
-![Screen Shot 2016-08-02 at 10.40.10.png](https://bitbucket.org/repo/9B6qdo/images/4206462266-Screen%20Shot%202016-08-02%20at%2010.40.10.png)
+![Mean](https://github.com/sportdeath/NonlinearSHE/raw/master/images/Mean.png)
