@@ -72,3 +72,9 @@ Thumbs.db
 #######
 *.swp
 *.swo
+
+# Latex #
+# ####
+*.bbl
+*.blg
+*.aux
