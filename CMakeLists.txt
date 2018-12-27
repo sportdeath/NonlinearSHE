@@ -46,6 +46,8 @@ set(LIBS ${LIBS} ${PROJECT_NAME})
 ## Unit Tests with CTest and GTest
 #####################################
 
+enable_testing()
+
 macro(MAKE_TEST test_name)
   add_executable(${test_name}
          test/${test_name}.cpp
