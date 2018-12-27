@@ -12,6 +12,8 @@
 \usepackage{url}
 \usepackage{multirow}
 \usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{graphicx}
 
 \def\zt{\mathbb{Z}/t\mathbb{Z}}
 \def\*#1{\mathbf{#1}}
@@ -20,8 +22,11 @@
 \newtheorem{lem}{Lemma}
 \newtheorem{prb}{Problem}
 
-\title{Algorithms for Evaluating Nonlinear Functions Under Homomorphic Encryption}
-\author{Trevor Henderson}
+\title{%
+  Algorithms for Evaluating Nonlinear Functions Under Homomorphic Encryption
+}
+\author{Trevor Henderson\\{\small Applied Cryptography Group}\\{\small Orange Labs, Caen, France}}
+\date{August 30, 2016}
 
 \begin{document}
 
@@ -29,135 +34,180 @@
 
     \begin{abstract}
 
-        This paper looks at methods of computing nonlinear functions efficiently
-        under the constraints of homomorphic computation
+        This paper investigates methods of computing nonlinear functions efficiently
+        under the constraints of common fully homomorphic encryption schemes
         --- access to only addition and multiplication modulo $t$.
         I show that $\sqrt{t}$ multiplications are necessary 
         and $3\sqrt{t}$ multiplications are sufficient to evaluate
-        an arbitrary single variable function.
+        a general single variable function.
         I then show that many multivariate functions, such as division
-        and boolean comparisons can be evaluated using
+        and boolean comparisons can also be evaluated using
         $O(\sqrt{t})$ multiplications.
-        The multiplicative depth for both algorithms is $O(\log t)$.
+        The multiplicative depth of both algorithms is $O(\log t)$.
+        Despite meeting asymptotic lower bounds,
+        it is disappointing to learn that
+        any reasonably complex homomorphic function is necessarily weakly polynomial.
+        This suggests that more flexible encryption schemes must be pursued if
+        homomorphic encryption is to become practical.
 
         Experimental results utilizing an 
-        implementation of the somewhat homomorphic scheme
-        YASHE boast
-        secure homomorphic evaluations of arbitrary
+        implementation of the somewhat homomorphic scheme,
+        YASHE, demonstrate
+        secure, homomorphic evaluations of arbitrary
         8-bit single variable functions 
         in less than 4 milliseconds amortized
         on a 2012 MacBook Pro.
+        Test scenarios that could be useful in cloud computing,
+        such as converting an image from RGB
+        to YCbCr color formats and applying color filters,
+        are computed in minutes.
+        Both of these results show significant improvement over the
+        state of the art.
     \end{abstract}
 
-    \section{Homomorphic Encryption Overview}
-        Homomorphic encryption let's you encrypt messages
+    \section{Introduction}
+        Put simply, homomorphic encryption allows one to encrypt messages
         and then
-        do math on the encrypted messages.
+        perform math on these encrypted messages without revealing the contents~\cite{firstImp}.
+        Researchers speculate that if the field becomes practically feasible it could revolutionize the security of cloud computing~\cite{cloud}.
+        For example, imagine a search engine that allowed you to encrypt a query with homomorphic encryption before sending it to the server.
+        The server would perform some sort of computation on your query to transform it into a list of results,
+        and then send the results back to you without ever knowing what it was that you searched for!
 
-        While there are many different homomorphic schemes,
-        all of them rely on encrypting the plaintext with some sort of noise.
-        As operations are performed on the ciphertexts this noise grows until,
+
+        Many commonly used encryption schemes, like RSA, are \emph{partially homomorphic} because they
+        allow for some, but not all, operations to be performed on the encrypted texts~\cite{rivest}.
+        However, for many decades it remained an unsolved problem as to whether there exists
+        a \emph{fully homomorphic} encryption scheme --- a scheme where any operation can be performed
+        on the encrypted texts~\cite{rivest}.
+        In 2013, Craig Gentry's groundbreaking work~\cite{homenc,firstImp} demonstrated that this ``holy grail'' of cryptography~\cite{grail}
+        does, in fact, exist.
+
+        This discovery and most derivative schemes~\cite{homenc,firstImp,yashe,faster,shorter,lwe,depth,leveled,gapsvp,smaller,integers},
+        obey the following format.
+        The plaintext is encrypted with some sort of noise.
+        As homomorphic operations are performed this noise grows until,
         after a certain amount of computation,
         it becomes so large that the ciphertext can no longer be decrypted.
-        A procedure called bootstrapping homomorphically decrypts a message,
-        resetting its noise to some small constant.
-        With bootstrapping, circuits of arbitrary depth can be evaluated.
-        However bootstrapping has an immense computational overhead, 
-        so in practice many schemes are somewhat homomorphic, 
-        in that there computational depth is bounded~\cite{homenc}.
+        To mitigate this,
+        a procedure called \emph{bootstrapping} decrypts and re-encrypts the text,
+        entirely with homomorphic operations, resetting the noise to some small constant.
+        By continuing to apply bootstrapping whenever necessary, an arbitrary number
+        of operations can be performed.
+        However, this comes with an immense computational overhead.
+        So, in practice, many schemes are \emph{somewhat homomorphic}~\cite{firstImp,homenc}.
+        These schemes do not bootstrap, which bounds the number of operations that can be performed
+        before the text deteriorates.
 
-        Homomorphic encryption began as a very slow process where single 
-        bit operations could take as much as half an hour to compute~\cite{firstImp}.
-        Now however we can evaluate large circuits in seconds.
-        But these circuits are very limited, 
-        as they can only
-        consist of addition and multiplication.
-        Many operations used in a standard computing model
-        like equality testing, bit shifting, floating point multiplication,
-        and division cannot be computed naturally with just those two operations.
-        Therefore this paper looks at efficient ways of computing
-        such functions.
+        In early work,
+        homomorphic encryption was reported to be extremely slow, with
+        single bit operations taking as long as half an hour to compute~\cite{firstImp}.
+        Recent advancements allow large circuits to be evaluated in seconds~\cite{yashe,somewhat}.
+        But still, these circuits are limited to consist of only addition and multiplication operations.
+        Although any function can theoretically be computed with these operations~\cite{homenc},
+        it is not obvious how to do so efficiently~\cite{newton,aes,genomic,fixedpoint}.
 
-    \section{Problem Description}
+        This paper investigates ways of computing these nonlinear
+        functions including
+        boolean comparisons and division under a particular model of homomorphic computing.
+        In section~\ref{desc}, the specific constraints of this model are established.
+        Section~\ref{high} provides a solution to this proposed problem and proves the solution is asymptotically optimal.
+        Section~\ref{multi} expands these results to include multivariate functions.
+        Finally, section~\ref{exp} provides experimental results and section~\ref{conc}
+        concludes with a discussion of some of the inherent limitations of homomorphic encryption revealed by these results.
 
-    The goal is to evaluate functions $f:\zt\to\zt$ efficiently under homomorphic encryption.
+    \section{A Model of Homomorphic Computing}
+    \label{desc}
+
+    The goal of this work
+    is to describe methods of evaluating functions over the integers modulo $t$ efficiently under homomorphic encryption.
     Setting aside the specifics of homomorphic schemes, 
-    we describe the constraints of this problem as follows.
+    the constraints of many of them can be generalized as follows~\cite{homenc,yashe,somewhat,firstImp,smaller,integers,faster,shorter,lwe,depth,leveled,gapsvp}:
     \begin{enumerate}[1.]
         \item
-            We only have access to addition and multiplication operations modulo the plaintext modulus $t$.
+            The available operations are addition and multiplication modulo the plaintext modulus, $t$.
         \item
-            Additions and scalar multiplications are relatively easy to compute where as nonscalar multiplications are much harder to compute. 
+            Additions and scalar multiplications are relatively easy to compute, where as nonscalar multiplications are much harder to compute. 
         \item
             Additions and scalar multiplications do not increase the noise of ciphertexts by much, whereas nonscalar multiplications greatly increase the noise of ciphertexts.
     \end{enumerate}
 
-    Therefore in order to evaluate functions efficiently, the computation must minimize
-    the total number of nonscalar multiplications --- to reduce the total computation time ---
-    as well as the nonscalar multiplicative depth --- to reduce the computational overhead associated with noise growth.
+    Therefore, in order to evaluate functions efficiently, the computation must minimize
+    the total number of nonscalar multiplications (reducing the total computation time),
+    as well as the nonscalar multiplicative depth (reducing the overhead associated with noise growth).
 
-    \subsection{Limitations of the Problem Description}
-        Naturally, this description cannot cover all cases as there are many homomorphic schemes, some with additional properties that can ease computation.
-        For example, some homomorphic schemes allow the individual bits of ciphertexts to be
-        accessed and computed upon.
+    \subsection{Limitations of this model}
+        Naturally, this model does not cover all cases as there are many homomorphic schemes,
+        some of which have additional properties that can ease computation.
+        For example, some configurations allow the individual bits of ciphertexts to be
+        accessed and computed upon~\cite{aes,newton,genomic}.
         This make
         it possible to implement standard computer hardware algorithms that rely on bit shifting and bit logic to perform operations like evaluating inequalities and performing division.
 
-        Additionally, there are homomorphic schemes that support plaintext moduli so large that performing integer multiplications to maximum multiplicative depth will not cause overflow.
-        Under these schemes one can perform floating point operations by keeping track of a radix index for each integer and scaling down the decrypted result appropriately~\cite{newton}.
+        Additionally, there are homomorphic schemes that support plaintext moduli so large that performing integer multiplications to the maximum multiplicative depth will not cause overflow.
+        Under these schemes one can perform floating point operations by keeping track of a radix index for each integer and scaling down the decrypted result appropriately~\cite{newton,fixedpoint}.
         
-        While these alternatives and others are freeing, they tend to come at a large cost.
-        Oftentimes ciphertexts will only encrypt single integers, 
-        losing orders of magnitude of computation time that could be gained with batch processing.
-        The ciphertexts can become bloated to allow for room for overflow, increasing their size and the time it takes to perform computations on them immensely.
+        While these alternatives are freeing, they currently come at enormous cost.
+        In the bit method, the ciphertexts only encrypt single integers,
+        making them orders of magnitude less efficient than schemes that use batch processing.
+        As for ciphertexts that do not overflow, they must be immense in size, again sacrificing valuable performance.
+        %Still, these methods are useful in areas where complicated homomorphic functions must be calculated on only a few, large inputs but I will not discuss them further.
+        %Additionally, from a purely aesthetic standpoint, adding other helper variables 
+        %like a radix, 
+        %takes away from some of the magic of homomorphic computation. 
+        %It is far less amazing to unbox something half finished,
+        %than it is to have a solution appear all at once and ready to go.
 
-        Additionally, from a purely aesthetic standpoint, adding other helper variables 
-        like a radix, 
-        takes away from some of the magic of homomorphic computation. 
-        It is far less amazing to unbox something half finished,
-        than it is to have a solution appear all at once and ready to go.
 
-        Still, these methods are useful in areas where complicated homomorphic functions must be calculated on only a few, large inputs but I will not discuss them further.
+    \section{Evaluating Single-Variable Functions}
+    \label{high}
 
-    \section{Solution Description}
+        The key insight of my proposed solution is to form
+        a more symbiotic relationship with the modulo operation that is built
+        into the homomorphic addition and multiplication operations.
+        I show that this modulus can be used as a tool for simplification, rather than a boundary that must be avoided, as in~\cite{newton, fixedpoint}.
 
-        My solution to the problem works to form
-        a more symbiotic relationship with the modulo operation that is built into the homomorphic addition and multiplication operations.
-        I use it as a tool for reduction rather than a boundary to be avoided.
+        Using this philosophy I will derive a method to compute any single variable homomorphic function. 
+        In section~\ref{notation}, I establish notation,
+        in section~\ref{comp} I discuss the conditions under which single variable functions are computable,
+        and in~\ref{bounds} I discuss the algorithms that compute them and their complexity.
 
-        Using this philosophy I derive a method to compute any single variable homomorphic function. 
-        I prove this method is an asymptotic lower bound.
-        Then I investigate several possible methods of computing multivariate functions.
-
-        This method can very efficiently perform batch operations on relatively small 
-        (8 or 16-bit) integers. 
-        This makes it very useful for problems like image processing.
+        %This method can efficiently perform batch operations on relatively small 
+        %(8 or 16-bit) integers. 
+        %This makes it very useful for problems like image processing.
 
     \subsection{Notation}
+    \label{notation}
+        For clarity, the proofs and discussion to below use the following notation:
         \begin{enumerate}[-]
             \item
                 A function is \emph{computable} if it can be computed using only addition and multiplication operations modulo $t$.
             \item
                 All homomorphically encrypted variables are represented in \textbf{bold}.
             \item
-                All operations are assumed to modulo $t$.
+                All operations are assumed to be modulo $t$ and equality ``$=$'' is used to represent congruence modulo $t$.
+            \item
+                $\delta: \zt\to\{0,1\}$ is the standard Dirac delta function, modulo $t$:
+                \begin{align}
+                    \delta(x) =
+                    \left\{
+                        \begin{array}{cc}
+                            1 & \text{if } x = 0\\
+                            0 & \text{if } x \neq 0
+                        \end{array}
+                    \right.
+                \end{align}
         \end{enumerate}
 
-    \section{Single Variable Functions}
-
-    Let us define the function $\delta: \zt\to \{0,1\}$ as follows:
-
-    \begin{align}
-        \delta(x) 
-        = \left\{
-            \begin{array}{cc}
-                1 & \text{if } x = 0\\
-                0 & \text{if } x \neq 0
-            \end{array}
-        \right.
-    \end{align}
+    \subsection{Computability of Single-Variable Functions}
+    \label{comp}
+    In lemmas~\ref{lem1} and~\ref{lem2}, I establish, through construction, that it is possible to compute any function with the given operations if the modulus, $t$, is prime.
+    Lemmas~\ref{lem3} and~\ref{lem4} go on to enumerate the number distinct functions that exist as well as the number of ways that these functions can be computed.
+    Theorem~\ref{thm1} concludes through a counting argument that all functions are computable if and only if the modulus $t$ is prime,
+    and furthermore that each of these functions has a unique polynomial that computes it.
 
     \begin{lem}
+      \label{lem1}
         If $\delta$ is computable, then any total function 
         $f:\zt\to\zt$ is computable.
     \end{lem}
@@ -167,8 +217,22 @@
             f(x) = \sum_{k = 0}^{t-1} f(k)\delta(x - k)
         \end{align}
     \end{proof}
+    
+    \begin{lem}
+      \label{lem2}
+        $\delta$ is computable if $t$ is prime.
+    \end{lem}
+    \begin{proof}
+        If $t$ is prime then $\delta$ can be computed as follows:
+        \begin{align}
+            \delta(x) = 1 - x^{t - 1}
+        \end{align}
+        By Fermat's Little Theorem~\cite{numbers}, if $x \neq 0$ then $x^{t - 1} = 1$ and so $\delta(x) = 0$.
+        If $x = 0$, then $x^{t - 1} = 0$ and so $\delta(x) = 1$. 
+    \end{proof}
 
     \begin{lem}
+      \label{lem3}
         Exactly $t^{t}$ distinct total functions $f:\zt\to\zt$ exist. 
     \end{lem}
     \begin{proof}
@@ -177,74 +241,66 @@
         \begin{align}
             |\zt|^{|\zt|} = t^t
         \end{align}
-        total functions that exist. 
+        distict functions that exist. 
     \end{proof}
 
     \begin{lem}
+      \label{lem4}
         At most $t^{\varphi(t) + 1}$ distinct total functions $f:\zt\to\zt$ are computable.
     \end{lem}
     \begin{proof}
-        By Euler's Theorem, $x^{\varphi(t) + 1} = x$, 
-        therefore any polynomial $P:\zt\to\zt$ can be reduced to the form
+      By Euler's Theorem~\cite{numbers}, $x^{\varphi(t) + 1} = x$, 
+        therefore any polynomial $P$ can be reduced to the form
         \begin{align}
           P(x) = \sum_{i = 0}^{\varphi(t)} a_{i}x^{i}
         \end{align}
         This reduced polynomial has $\varphi(t) + 1$ coefficients, 
-        each of which take on one of $|\zt| = t$ values,
+        each of which can take on one of $|\zt| = t$ values,
         therefore $t^{\varphi(t) + 1}$ such polynomials exist. 
         Any computation involving only addition and multiplication modulo $t$
         is equivalent to a polynomial modulo $t$, therefore at most
         $t^{\varphi(t) + 1}$ total functions can be computed. 
     \end{proof}
-    
-    \begin{lem}
-        $\delta$ is computable if $t$ is prime.
-    \end{lem}
-    \begin{proof}
-        If $t$ is prime then $\delta$ can be computed as follows:
-        \begin{align}
-            \delta(x) = 1 - x^{t - 1}
-        \end{align}
-        By Fermat's Little Theorem, if $x \neq 0$ then $x^{t - 1} = 1$ and so $\delta(x) = 0$.
-        If $x = 0$, then $x^{t - 1} = 0$ and so $\delta(x) = 1$. 
-    \end{proof}
 
     \begin{thm}
+      \label{thm1}
         All possible functions 
         $f:\zt\to\zt$ 
         can be computed if and only if $t$ is prime.
-    \end{thm}
-    \begin{proof}
-        If $t$ is prime then $\delta$ can be computed by Lemma 4 so by Lemma 1, all functions can be computed.
-        If $t$ is not prime then $\varphi(t) + 1 < t$. So by Lemmas 2 and 3
-        there exist some functions which cannot be computed.
-    \end{proof}
-
-    \begin{thm}
-        If $t$ is prime, then each function 
+        Furthermore,
+        if $t$ is prime, then each function 
         $f:\zt\to\zt$ 
         is uniquely represented by a polynomial of degree less than $t$. 
     \end{thm}
     \begin{proof}
-        There are $t^{\phi(t) +1} = t^t$ distinct polynomials and $t^t$ total functions, therefore every function must be uniquely represented by exactly one polynomial.
+      If $t$ is prime then $\delta$ can be computed by lemma~\ref{lem2}. So, by lemma~\ref{lem1}, all functions can be computed.
+        If $t$ is not prime then $\varphi(t) + 1 < t$. So, by lemmas~\ref{lem3} and~\ref{lem4}
+        there must exist some function that cannot be computed.
+
+        If $t$ is prime, there are $t^{\varphi(t) +1} = t^t$ functions computable by polynomials and $t^t$ distinct functions.
+        Since no two distinct functions can be computed in the same way each function must be uniquely represented by exactly one polynomial.
     \end{proof}
 
-    From this point on we will consider the modulus $t$ to be prime.
-    We can calculate the minimal polynomial representing a function as follows:
+    \subsection{Complexity of Single-Variable Functions}
+    \label{bounds}
+
+    Given the analysis in the previous section,
+    consider the modulus $t$ to be prime from this point forward.
+    From the construction in lemma~\ref{lem1} and the definition of $\delta$ from lemma~\ref{lem2},
+    we can calculate the minimal polynomial representing a function as follows:
     \begin{align}
         P(x) = \sum_{k = 0}^{t-1} f(k)\delta(x - k)\pmod{x^t - x}
     \end{align}
+    Computing this polynomial takes $O(t^2F)$ time where $F$ is the complexity of $f(x)$.
+    However, this computation occurs without any homomorphic overhead, so it can be considered negligible, for reasonable choices of $f$ and $t$.
 
-    This polynomial can be calculated in the clear so it has negligible impact on running time.
-    As this polynomial is 
-    the only polynomial with degree less than $t$ equivalent to $f$,
-    there is no faster way to calculate $f(x)$ than by evaluating $P$ at $x$.
+    Theorem~\ref{thm1} proved that each function $f$ has a unique polynomial that computes it.
+    Therefore, there is no faster way to calculate $f(x)$ than by evaluating $P$ at $x$.
     Paterson and Stockmeyer~\cite{paterson} proved that evaluating an arbitrary polynomial of degree
     $t$ requires at least $\sqrt{t}$ nonscalar multiplications.
 
-    Algorithm~\ref{evalSinglePoly} is a modification of Paterson and Stockmeyer's Algorithm B which maintains a logarithmic multiplicative depth.
-    It requires approximately $3\sqrt{t}$ nonscalar multiplications and has a multiplicative depth of
-    approximately $\log_2 t$.
+    Algorithm~\ref{evalSinglePoly} is a modification of Paterson and Stockmeyer's Algorithm B that maintains a logarithmic multiplicative depth.
+    It requires approximately $3\sqrt{t}$ nonscalar multiplications and has a multiplicative depth of $O(\log t)$.
 
     \begin{algorithm}
         \caption{Evaluate a single variable polynomial}\label{evalSinglePoly}
@@ -307,12 +363,13 @@
         \end{algorithmic}
     \end{algorithm}
 
-    Therefore any single variable function can be computed homomorphically with no more than
-    $3\sqrt{t}$ nonscalar multiplications and a multiplicative depth of no more than $\log_2 t$.
-    This is asymptotically equal to the minimum amount of nonscalar multiplications needed to compute an arbitrary single variable function.
+    Therefore any single variable function can be computed homomorphically with
+    $3\sqrt{t}$ nonscalar multiplications and a multiplicative depth of $O(\log t)$.
+    This is asymptotically equal to the minimum number of nonscalar multiplications needed to compute an arbitrary single variable function.
 
     \section{Multivariate Functions}
-    \subsection{Brute Force}
+    \label{multi}
+    %\subsection{Brute Force}
         Mimicking the single variable case,
         we can compute any bivariate function by evaluating the polynomial
         \begin{align}
@@ -326,151 +383,159 @@
             \pmod{x^t - x}
             \pmod{y^t - y}
         \end{align}
-        This polynomial has $O(t^2)$ coefficients. 
-        A trivial algorithm for computing this polynomial is shown in Algorithm~\ref{multivariatePoly}.
-        \begin{algorithm}
-            \caption{Evaluate a multivariate polynomial}\label{multivariatePoly}
-            \begin{algorithmic}
-                \Function{EvaluatePolynomial}{$\mathbf{x}$, $\mathbf{y}$, $P$}
-                    %\State On input $\mathbf{x}$ and $[a_0\dots a_n]$ with $n = m^2 - 1
-                    \\
-                    \State{
-                      Let $P$ be a polynomial 
-                      $a_{0,0} +  
-                      \cdots + a_{i,j}x^{i}y^j + 
-                      \cdots + 
-                      a_{t,t}x^{t}y^t$
-                    }
-                    \\
-                    \State{
-                      $\mathbf{X}[0] \leftarrow 1$, $\mathbf{X}[1] \leftarrow \mathbf{x}$
-                    }
-                    \Comment{$\mathbf{X}[i] = \mathbf{x}^i$}
-                    \State{
-                      $\mathbf{Y}[0] \leftarrow 1$, $\mathbf{Y}[1] \leftarrow \mathbf{x}$
-                    }
-                    \Comment{$\mathbf{Y}[i] = \mathbf{x}^i$}
-                    \\
-                    \For{$i = 2$ to $t$}
-                        \State{
-                          $\mathbf{X}[i] = 
-                          \mathbf{X}\left[\left\lfloor\frac{i}{2}\right\rfloor\right]
-                          \cdot
-                          \mathbf{X}\left[\left\lceil\frac{i}{2}\right\rceil\right]$
-                        }
-                        \Comment{Compute powers $\mathbf{x}^2 \dots \mathbf{x}^{t}$}
-                        \State{
-                          $\mathbf{Y}[i] = 
-                          \mathbf{Y}\left[\left\lfloor\frac{i}{2}\right\rfloor\right]
-                          \cdot
-                          \mathbf{Y}\left[\left\lceil\frac{i}{2}\right\rceil\right]$
-                        }
-                        \Comment{Compute powers $\mathbf{y}^2 \dots \mathbf{y}^{t}$}
-                    \EndFor%
+        This polynomial has $O(t^2)$ coefficients, and unfortunately the same tricks used in algorithm~\ref{evalSinglePoly}
+        cannot be easily applied to simplify the computation because of the intertwined variables.
+
+        So, evaluating the polynomial naively would take $O(t^2)$ multiplications,
+        but section~\ref{linsep} below describes how many useful bivariate functions can be constructed by combining single-variable functions.
+        %A trivial algorithm for computing this polynomial is shown in Algorithm~\ref{multivariatePoly}.
+        %\begin{algorithm}
+            %\caption{Evaluate a multivariate polynomial}\label{multivariatePoly}
+            %\begin{algorithmic}
+                %\Function{EvaluatePolynomial}{$\mathbf{x}$, $\mathbf{y}$, $P$}
+                    %%\State On input $\mathbf{x}$ and $[a_0\dots a_n]$ with $n = m^2 - 1
+                    %\\
+                    %\State{
+                      %Let $P$ be a polynomial 
+                      %$a_{0,0} +  
+                      %\cdots + a_{i,j}x^{i}y^j + 
+                      %\cdots + 
+                      %a_{t,t}x^{t}y^t$
+                    %}
+                    %\\
+                    %\State{
+                      %$\mathbf{X}[0] \leftarrow 1$, $\mathbf{X}[1] \leftarrow \mathbf{x}$
+                    %}
+                    %\Comment{$\mathbf{X}[i] = \mathbf{x}^i$}
+                    %\State{
+                      %$\mathbf{Y}[0] \leftarrow 1$, $\mathbf{Y}[1] \leftarrow \mathbf{x}$
+                    %}
+                    %\Comment{$\mathbf{Y}[i] = \mathbf{x}^i$}
+                    %\\
+                    %\For{$i = 2$ to $t$}
+                        %\State{
+                          %$\mathbf{X}[i] = 
+                          %\mathbf{X}\left[\left\lfloor\frac{i}{2}\right\rfloor\right]
+                          %\cdot
+                          %\mathbf{X}\left[\left\lceil\frac{i}{2}\right\rceil\right]$
+                        %}
+                        %\Comment{Compute powers $\mathbf{x}^2 \dots \mathbf{x}^{t}$}
+                        %\State{
+                          %$\mathbf{Y}[i] = 
+                          %\mathbf{Y}\left[\left\lfloor\frac{i}{2}\right\rfloor\right]
+                          %\cdot
+                          %\mathbf{Y}\left[\left\lceil\frac{i}{2}\right\rceil\right]$
+                        %}
+                        %\Comment{Compute powers $\mathbf{y}^2 \dots \mathbf{y}^{t}$}
+                    %\EndFor%
 
 
 
-        %$x^2\dots x^{t - 1}$ and $y^2\dots y^{t - 1}$. T
+        %%$x^2\dots x^{t - 1}$ and $y^2\dots y^{t - 1}$. T
 
-                    %\State let $a_{ij}$ be the coefficient of term $x^iy^j$
-                    \\
-                    \State{$p \leftarrow 0$}
-                    \For{$i = 0$ to $t - 1$}
-                        \For{$j = 0$ to $t - 1$}
-                          \State{$p \leftarrow p + a_{ij}\mathbf{X}[i]\mathbf{Y}[j]$}
-                          \Comment{Multiply coefficients and variables}
-                        \EndFor%
-                    \EndFor%
-                    \State\Return{$\mathbf{p}$}
-                    \\
-                \EndFunction%
-            \end{algorithmic}
-        \end{algorithm}
+                    %%\State let $a_{ij}$ be the coefficient of term $x^iy^j$
+                    %\\
+                    %\State{$p \leftarrow 0$}
+                    %\For{$i = 0$ to $t - 1$}
+                        %\For{$j = 0$ to $t - 1$}
+                          %\State{$p \leftarrow p + a_{ij}\mathbf{X}[i]\mathbf{Y}[j]$}
+                          %\Comment{Multiply coefficients and variables}
+                        %\EndFor%
+                    %\EndFor%
+                    %\State\Return{$\mathbf{p}$}
+                    %\\
+                %\EndFunction%
+            %\end{algorithmic}
+        %\end{algorithm}
 
-        This algorithm requires $O(t^2)$ multiplications and has a multiplicative depth of
-        $\log_2 t + 1$.
-        The multivariate case is indeed much slower than the univariate case as the intertwined variables make it difficult
-        to decrease the total number of nonscalar multiplications without greatly 
-        increasing the nonscalar multiplicative depth.
-        Additionally, for functions with even more variables, this method quickly suffers the curse of dimensionality.
-        For extremely random two dimensional functions
-        brute force might be the only option,
-        however as we will see most practical functions can be evaluated much faster.
+        %This algorithm requires $O(t^2)$ multiplications and has a multiplicative depth of
+        %$\log_2 t + 1$.
+        %The multivariate case is indeed much slower than the univariate case as the intertwined variables make it difficult
+        %to decrease the total number of nonscalar multiplications without greatly 
+        %increasing the nonscalar multiplicative depth.
+        %Additionally, for functions with even more variables, this method quickly suffers the curse of dimensionality.
+        %For extremely random two dimensional functions
+        %brute force might be the only option,
+        %however as we will see most practical functions can be evaluated much faster.
 
     \subsection{Linearly separable functions}
-        Many functions, although not linear, can be evaluated as a combination of single variable functions and linear operations.
-        For example the following common functions are linearly separable:
-        \begin{enumerate}[-]
-            \item
-                \textsc{Equal To}:
-                \begin{align}
-                    \left[\mathbf{x} = \mathbf{y}\right]
-                    =
-                    \left[\mathbf{x} - \mathbf{y} = 0\right]
-                \end{align}
-            \item
-                \textsc{Greater Than}:
-                \\
-                Let
-                \begin{align}
-                    \mathbf{a} 
-                    &= \left[\mathbf{x}\geq \frac{t-1}{2}\right]
-                    \\
-                    \mathbf{b} 
-                    &= \left[\mathbf{y} \leq \frac{t-1}{2}\right]
-                    \\
-                    \mathbf{c} &= \left[(\mathbf{x} - \mathbf{y} \mod{t}) \leq \frac{t-1}{2}\right]
-                \end{align}
-                %Where
-                %\begin{align}
-                    %[\omega]
-                    %= \left\{
-                        %\begin{array}{cc}
-                            %1 & \text{if } \omega \text{ is true}\\
-                            %0 & \text{if } \omega \text{ is false}\\
-                        %\end{array}
-                    %\right.
-                %\end{align}
-                Then
-                \begin{align}
-                    [\mathbf{x} \geq \mathbf{y}] 
-                    %&= \mathbf{a}\mathbf{b} + \mathbf{c}(\mathbf{a}(1-\mathbf{b}) + (1-\mathbf{a})\mathbf{b})
-                    %\\
-                    &=
-                    \mathbf{a}\mathbf{b} + \mathbf{c}(\mathbf{a} + \mathbf{b} - 2\mathbf{a}\mathbf{b})
-                \end{align}
-            \item
-                \textsc{Division}:
-                \begin{align}
-                    \frac{\mathbf{x}}{\mathbf{y}} = \exp(\log\mathbf{x} - \log\mathbf{y})
-                \end{align}
-            \item
-                \textsc{Logarithm}:
-                \begin{align}
-                    \log_{\mathbf{b}}\mathbf{x} = \exp(\log\log\mathbf{x} - \log\log\mathbf{b})
-                \end{align}
-            \item
-                \textsc{Exponentiation}:
-                \begin{align}
-                    \mathbf{x}^\mathbf{y} = \exp(\mathbf{y}\log\mathbf{x})
-                \end{align}
-        \end{enumerate}
+        \label{linsep}
+        Many functions, although not linear, can be evaluated as a combination of single variable functions and linear operations,
+        giving them a complexity of $O(\sqrt{t})$.
+        Table~\ref{linseptab} demonstrates how division, logarithms, exponentiation and boolean comparisons are all linearly separable.
 
-        The boolean expressions evaluate to either integers, either 0 or 1.
-        However, division, logarithm and exponentiation algorithms 
-        evaluate to real numbers, so they must be modified before they can be
-        used homomorphically. 
-        Consider the case of division. 
-        Since we can only perform integer operations, we lose resolution when taking logarithms.
-        To counteract this we can inflate the output of the logarithmic functions
-        to take advantage of the entire range.
+        \begin{table}[h]
+        \label{linseptab}
+        \begin{center}
+        \begin{tabular}{|c|c|}
+          \hline
+          Division & 
+          \parbox{4.5cm}{%
+            \begin{align*}
+              \frac{\mathbf{x}}{\mathbf{y}} = \exp(\log\mathbf{x} - \log\mathbf{y})
+            \end{align*}
+          }\\
+          \hline
+          Logarithm&
+          \parbox{4.5cm}{%
+            \begin{align*}
+              \log_{\mathbf{b}}\mathbf{x} = \exp(\log\log\mathbf{x} - \log\log\mathbf{b})
+            \end{align*}
+          }\\
+          \hline
+          Exponentiation&
+          \parbox{4.5cm}{%
+            \begin{align*}
+              \mathbf{x}^\mathbf{y} = \exp(\mathbf{y}\log\mathbf{x})
+            \end{align*}
+          }\\
+          \hline
+          Equal To&
+          \parbox{4.5cm}{%
+            \begin{align*}
+              \left[\mathbf{x} = \mathbf{y}\right]
+              =
+              \left[\mathbf{x} - \mathbf{y} = 0\right]
+            \end{align*}
+          }\\
+          \hline
+          Greater Than&
+          \parbox{4.5cm}{
+            \begin{align*}
+              \mathbf{a} 
+              &= \left[\mathbf{x}\geq \frac{t-1}{2}\right]
+              \\
+              \mathbf{b} 
+              &= \left[\mathbf{y} \leq \frac{t-1}{2}\right]
+              \\
+              \mathbf{c} &= \left[(\mathbf{x} - \mathbf{y} \mod{t}) \leq \frac{t-1}{2}\right]
+              \\
+              [\mathbf{x} \geq \mathbf{y}] 
+              &=
+              \mathbf{a}\mathbf{b} + \mathbf{c}(\mathbf{a} + \mathbf{b} - 2\mathbf{a}\mathbf{b})
+            \end{align*}
+          }\\
+         \hline
+        \end{tabular}
+        \end{center}
+        \caption{Linearly separable functions.}
+        \end{table}
+
+        One thing to note about this table is that division, logarithms and exponentiation are all approximate.
+        These functions and their subcomponents evaluate to real numbers, so they are not well defined over the integers.
+        With some careful modification these approximations can be improved.
+
+        Consider the case of division.
+        Resolution is lost when taking the logarithm, so
+        to counteract this, we can inflate the output of the logarithmic functions
+        to take advantage of their entire range, $t$.
         We also must account for the fact that the subtraction is done modulo $t$, 
         so we will need to leave an extra bit to check if $y > x$.
-        Finally we must choose the what should happen in the case of division by zero.
+        Finally, we must choose what should happen in the case of division by zero.
         Algorithm~\ref{divis} demonstrates these modifications and chooses to return the numerator if the denominator is zero.
 
     \begin{algorithm}
-        \caption{Division}\label{divis}
+        \caption{Approximate Homomorphic Division}\label{divis}
         \begin{algorithmic}
             \Function{log}{$\mathbf{x}$}
                 \If{$\mathbf{x} = 0$}
@@ -509,71 +574,77 @@
             \EndFunction%
         \end{algorithmic}
     \end{algorithm}
+
         An almost identical algorithm can also be used to compute $\log_\mathbf{b}\mathbf{x}$.
         A homomorphic algorithm to compute exponentiation depends largely on the desired response when $\mathbf{x}^\mathbf{y} \geq t$.
-        One thing to note is that division, logarithms and exponentiation computed this way will be approximate. Improving these approximations is discussed in the next section.
+        Discovering a more precise way to compute these functions is left to future work.
+        %One thing to note is that division, logarithms and exponentiation computed this way will be approximate. Improving these approximations is discussed in the next section.
         
-    \section{Future work}
-        \subsection{Optimization of linearly separable functions}
-          In certain applications an approximate algorithms
-          will not be acceptable.
-          An interesting problem would be to see if these approximations
-          could be improved upon automatically using machine learning.
-          For example, the optimization problem for division could be formulated as follows:
+    %\section{Future work}
+        %\subsection{Optimization of linearly separable functions}
+          %In certain applications an approximate algorithms
+          %will not be acceptable.
+          %An interesting problem would be to see if these approximations
+          %could be improved upon automatically using machine learning.
+          %For example, the optimization problem for division could be formulated as follows:
 
-          \begin{prb}
-            Given the form $F(x,y) = f_1\left( f_2(x) + f_3(y) \right)$, determine $f_1$, $f_2$, $f_3$ that minimize 
-            \begin{align}
-              \sum_{0\leq x,y<t} \left(F(x,y) 
-              - \left\lfloor\frac{x}{y}\right\rfloor\right)^2
-            \end{align}
-          \end{prb}
+          %\begin{prb}
+            %Given the form $F(x,y) = f_1\left( f_2(x) + f_3(y) \right)$, determine $f_1$, $f_2$, $f_3$ that minimize 
+            %\begin{align}
+              %\sum_{0\leq x,y<t} \left(F(x,y) 
+              %- \left\lfloor\frac{x}{y}\right\rfloor\right)^2
+            %\end{align}
+          %\end{prb}
 
-          Here $f_1$, $f_2$, and $f_3$ could be considered arrays of size $t$ with integers in $\zt$, 
-          therefore the search space is finite albeit very large.
-          Simple hill climbing on these functions from the assignments produced by 
-          Algorithm~\ref{divis} can make mild improvements.
-          However my attempts to use other methods including simulated annealing and genetic algorithms have not yet been successful.
-          %I suspect though have not proved that the problem is NP hard.
-        %maximum common subgraph isomorphism problem
+          %Here $f_1$, $f_2$, and $f_3$ could be considered arrays of size $t$ with integers in $\zt$, 
+          %therefore the search space is finite albeit very large.
+          %Simple hill climbing on these functions from the assignments produced by 
+          %Algorithm~\ref{divis} can make mild improvements.
+          %However my attempts to use other methods including simulated annealing and genetic algorithms have not yet been successful.
+          %%I suspect though have not proved that the problem is NP hard.
+        %%maximum common subgraph isomorphism problem
             
-        \subsection{Non linearly separable functions}
-            In order to evaluate functions that are not naturally separable, 
-            machine learning techniques 
-            could be used to find approximate them.
-            Neural networks for example could be implemented 
-            to approximate nonlinear functions.
-            Neural networks rely on three operations: 
-            addition, multiplication and the sigmoid function.
-            The sigmoid function is a function of a single variable 
-            therefore it could be implemented homomorphically 
-            using the methods described above.
+        %\subsection{Non linearly separable functions}
+            %In order to evaluate functions that are not naturally separable, 
+            %machine learning techniques 
+            %could be used to find approximate them.
+            %Neural networks for example could be implemented 
+            %to approximate nonlinear functions.
+            %Neural networks rely on three operations: 
+            %addition, multiplication and the sigmoid function.
+            %The sigmoid function is a function of a single variable 
+            %therefore it could be implemented homomorphically 
+            %using the methods described above.
     \section{Experimental Results}
+    \label{exp}
 
         The algorithms described in this paper have been implemented in C++ 
         under the
         somewhat homomorphic encryption scheme YASHE (Yet Another Somewhat Homomorphic Encryption scheme)~\cite{yashe}.
-        The library is built upon Victor Shoup's number theoretic library C++ NTL~\cite{ntl}.
+        The library is built upon Victor Shoup's number theoretic library C++, NTL~\cite{ntl}.
+        It is available along with the following experiments at \url{http://github.com/sportdeath/NonlinearSHE}.
 
-        The system is determined by the plaintext modulus $t$, the batch size $\beta$ and the security parameter $\lambda$.
-        Hidden parameters for the YASHE scheme that determine the batch size and security parameter and the cylotomic degree $d$, and the ciphertext modulus $q$.
-        Batches are made using the Chinese Remainder Theorem and batch size is equal to the number of factors modulo $t$ of the $d$th cyclotomic polynomial.
+        The YASHE encryption is determined by the plaintext modulus $t$, the batch size $\beta$ and the security parameter $\lambda$.
+        Hidden parameters that determine the batch size and security parameter are the cylotomic degree $d$ and the ciphertext modulus $q$.
+        Batches are made using the Chinese Remainder Theorem and the batch size is equal to the number of factors modulo $t$ of the $d$th cyclotomic polynomial.
         For the system to be secure both $d$ and $q$ must be large.
-        The degree of the $d$th cyclotomic polynomial is $n = \varphi(d)$, where $\varphi$ is Euler's Toitient function. We set the standard deviation of the ciphertext noise $\sigma_{err} = 8$ to be constant.
+        The degree of the $d$th cyclotomic polynomial is $n = \varphi(d)$, where $\varphi$ is Euler's Toitient function.
+        As per convention, I set the standard deviation of the ciphertext noise to be a constant; $\sigma_{err} = 8$.
 
-        I have investigated YASHE parameters for both 8 and 16 bit integers.
+        I investigated YASHE parameters for both 8 and 16 bit integers.
         %and 16 bit integers.
         I use the Fermat primes 
         $t = 2^8 + 1$ 
         and $t = 2^{16} + 1$ as moduli for 8 and 16 bit integers respectively.
         Through manual search I have found values of $d$ 
-        with maximal batch sizes that
+        with maximal batch sizes that are
         large enough to be secure and provide a large multiplicative depth,
-        while not being so large as to be computationally infeasible.
+        while not being so large as to be computationally infeasible, shown in table~\ref{tab2}.
         %the largest batch sizes given
         %that they are are large enough to be secure
         %and not so large as to be computationally infeasible.
 
+        \begin{table}[h]
         \begin{center}
             \begin{tabular}{| r | r | r |}
                 \hline
@@ -589,10 +660,13 @@
                 \\ \hline
             \end{tabular}
         \end{center}
+        \caption{Feasible values of $d$ and corresponding batch sizes.}
+        \label{tab2}
+        \end{table}
 
 
         For those batch sizes, 
-        we calculate the maximum value of $\log_2{q}$ that guarantees
+        I calculate the maximum value of $\log_2{q}$ that guarantees
         $\lambda$ bits of security with the following equation from~\cite{comparison}:
         \begin{align}
             \log_2(q) 
@@ -610,9 +684,10 @@
             }
         \end{align}
         I found the values of the minimal root Hermite factor $\gamma(m)$ by interpolating the values of
-        $\gamma(m)$ found in Table 1 of~\cite{comparison}
-        The following is a table of the derived values:
+        $\gamma(m)$ found in Table 1 of~\cite{comparison}.
+        Table~\ref{tab3} shows the derived values.
 
+        \begin{table}[h]
         \begin{center}
             \begin{tabular}{| r | r || r | r | r | r |}
                 \cline{3-6}
@@ -632,14 +707,18 @@
                 \\ \hline
             \end{tabular}
         \end{center}
+        \caption{Number of bits in the ciphertext modulus for various security parameters and batch sizes.}
+        \label{tab3}
+        \end{table}
 
-        I have chosen to perform timing tests on the following
-        sets of parameters which are each optimized to have a
+        I have chosen to perform timing tests on the parameters shown in table~\ref{param},
+        which are each optimized to have a
         multiplicative depth just large enough to support a particular operation.
-        I have found that setting the radix $w$ such that
+        I have found that setting the radix, $w$, such that
         $\log_2 w \approx \frac{\log_2 q}{6}$ to be a good trade off
         between running time and multiplicative depth.
 
+        \begin{table}
         \begin{center}
             \begin{tabular}{| r | r | r | r | r | r | c |}%
                 \hline
@@ -653,11 +732,30 @@
                 \\ \hline
             \end{tabular}
         \end{center}
+        \caption{The chosen sets of timing parameters.}
+        \label{param}
+        \end{table}
 
-        The following timing results were computed on a 2012 Macbook Pro.
-        NTL was not built with threading.
-        All of the tests have been averaged over 10 trials.
+        The timing results shown at the end of this paper in table~\ref{results} were computed on a 2012 Macbook Pro.
+        NTL was not built with threading and
+        all of the tests have been averaged over 10 trials.
+        It is worth noting that computing \emph{any} random function on the 8-bit inputs can be completed in as little as 4 milliseconds per input with the minimal number of layers.
+        This function could be anything from division by a constant to a random mapping of inputs to outputs.
+        Additionally, division of ciphertexts can be completed in 27 ms per input and comparison of ciphertexts can be completed in as little as 13 ms per input.
 
+        Compared to \cite{newton}, this is roughly three times faster at computing comparisons.
+        Moreover, the experiments in \cite{newton} were computed on only 5-bit integers rather than 8-bit integers.
+        My division is 9 ms ($~66\%$) slower than their's, but again they were using smaller, 6-bit, integers.
+        The biggest improvement however is that \cite{newton}'s algorithms were designed by hand for each function,
+        so computing other more complicated functions is infeasible, whereas in my case it is very straight forward.
+
+        Some proof-of-concept image processing applications are also tested.
+        These include transforming the color space of an image from RGB to YCbCr,
+        performing a random color transformation on the inputs (an image filter), and mixing images together.
+        Performing the color transformation involves performing fractional multiplications and can be computed in roughly 4 minutes on 70x70, 3 channel images shown in figure~\ref{rgb_to_ycbcr}.
+        The random color transformation involved computing a single variable function
+        on a single channel, 8-bit image and completes in under 1 minute as shown in figure~\ref{color}.
+        Finally, taking the mean of images involved performing linear combination of fractional multiplications and completed in roughly 5 minutes as shown in figure~\ref{mean}.
         %\begin{center}
             %\begin{tabular}{| r | r | r | r |}
                 %\hline
@@ -790,6 +888,114 @@
             %\end{tabular}
         %\end{center}
 
+
+    %\begin{algorithm}
+        %\caption{Logarithm}
+        %\begin{algorithmic}
+            %\Function{loglog}{$\mathbf{x}$}
+                %\If {$\mathbf{x} = 0$}
+                    %\State\Return{0}
+                %\Else
+                    %\State\Return{
+                        %$
+                        %\left\lfloor
+                        %\frac{t}{2}\left(
+                            %\frac{\log\log\mathbf{x}}{\log\log t}
+                        %\right)
+                        %\right\rceil
+                        %$
+                    %}
+                %\EndIf
+            %\EndFunction
+            %\\
+            %\Function{exp}{$\mathbf{x}$}
+                %\If {$\mathbf{x} > \frac{t}{2}$}
+                    %\State\Return{0}
+                %\Else
+                    %\State\Return {$
+                        %\left\lfloor
+                            %t^{\frac{2\mathbf{x}}{t}}
+                        %\right\rceil
+                    %$}
+                %\EndIf
+            %\EndFunction
+            %\\
+            %\Function{log}{$\mathbf{b}$, $\mathbf{x}$}
+                %\State\Return{$
+                    %\textsc{exp}(
+                    %\textsc{loglog}(\mathbf{x}) 
+                    %- 
+                    %\textsc{loglog}(\mathbf{b}) 
+                    %)
+                %$}
+            %\EndFunction
+        %\end{algorithmic}
+    %\end{algorithm}
+
+    \section{Conclusion}
+    \label{conc}
+
+    In this paper I investigated the problem of computing nonlinear functions under the constraints of homomorphic encryption.
+    I developed a computational model that describes the complexity of most homomorphic schemes.
+    Under this model I showed that if the plaintext modulus $t$ is prime, then any function of a single variable can be computed in $O(\sqrt{t})$ time.
+    Moreover, many multivariate functions, like division and boolean operations, can be comprised of single variable functions to achieve the same complexity.
+    My experimental results are both comparatively fast and demonstrate the correctness of my algorithms.
+    Additionally, the results show that this method is capable of solving realistic image processing tasks that might be performed by a cloud computing service.
+
+    One issue that these results raise is that the complexity of evaluating a function is polynomial with respect to the \emph{description} of the input, $t$. This makes this algorithm weakly polynomial.
+    So, applying the techniques I used on 8-bit integers to 64-bit integers, or equivalently, doubles, would be almost 1 billion times slower.
+    If homomorphic encryption is really intended to be used on real world data then it must be possible to do without this exponential overhead.
+    This suggests that some part of the homomorphic computing model must be relaxed to allow for more than
+    simply multiplication and addition modulo $t$.
+
+    As for the other proposed computational models~\cite{newton,fixedpoint,aes,genomic},
+    it remains an open problem as to whether they allow for strongly polynomial evaluation.
+
+    \section{Acknowledgements}
+
+    I would like to thank my supervisor S{\'e}bastien Canard and
+    the graduate students
+    Marie Paindavoine,
+    Donald Nokam Kuate, and
+    Bastien Vialla for their generous feedback and support.
+    Also, thank you to my coworkers and friends
+    Yvan Raffle,
+    Timoth{\'e}e Planchon,
+    and
+    Peter Mosely
+    who made me feel at home in a far off land.
+    {\`A} la prochaine!
+
+    \newpage
+
+    \nocite{*}
+    \bibliographystyle{plain}
+    \bibliography{biblio}{}
+
+    \newpage
+
+    \section{Appendix}
+
+    \begin{figure}[h]
+      \includegraphics[width=0.6\textwidth]{fig/RGB_to_YCbCr.png}
+      \centering
+      \caption{A homomorphic transformation of Mona Lisa from RGB to YCbCr preserves visual similarity.
+      The Y, Cb, and Cr channels are displayed in the middle}
+      \label{rgb_to_ycbcr}
+    \end{figure}
+    \begin{figure}[h]
+      \includegraphics[width=0.45\textwidth]{fig/color_transform.png}
+      \centering
+      \caption{The input (left) and output (right) of an arbitrary homomorphic color transformation.}
+      \label{color}
+    \end{figure}
+    \begin{figure}[h]
+      \includegraphics[width=0.6\textwidth]{fig/mean.png}
+      \centering
+      \caption{A linear mixture of Mona Lisa and Lena, computed homomorphically.}
+      \label{mean}
+    \end{figure}
+    \begin{table}[h]
         \begin{center}
             \begin{tabular}{| c | r | r |}
                 \hline
@@ -863,52 +1069,8 @@
                 \\ \hline
             \end{tabular}
         \end{center}
-
-    %\begin{algorithm}
-        %\caption{Logarithm}
-        %\begin{algorithmic}
-            %\Function{loglog}{$\mathbf{x}$}
-                %\If {$\mathbf{x} = 0$}
-                    %\State\Return{0}
-                %\Else
-                    %\State\Return{
-                        %$
-                        %\left\lfloor
-                        %\frac{t}{2}\left(
-                            %\frac{\log\log\mathbf{x}}{\log\log t}
-                        %\right)
-                        %\right\rceil
-                        %$
-                    %}
-                %\EndIf
-            %\EndFunction
-            %\\
-            %\Function{exp}{$\mathbf{x}$}
-                %\If {$\mathbf{x} > \frac{t}{2}$}
-                    %\State\Return{0}
-                %\Else
-                    %\State\Return {$
-                        %\left\lfloor
-                            %t^{\frac{2\mathbf{x}}{t}}
-                        %\right\rceil
-                    %$}
-                %\EndIf
-            %\EndFunction
-            %\\
-            %\Function{log}{$\mathbf{b}$, $\mathbf{x}$}
-                %\State\Return{$
-                    %\textsc{exp}(
-                    %\textsc{loglog}(\mathbf{x}) 
-                    %- 
-                    %\textsc{loglog}(\mathbf{b}) 
-                    %)
-                %$}
-            %\EndFunction
-        %\end{algorithmic}
-    %\end{algorithm}
-
-    \nocite{*}
-    \bibliographystyle{plain}
-    \bibliography{biblio}{}
+        \label{results}
+        \caption{Timing results from the parameters in table~\ref{param}.}
+      \end{table}
 
 \end{document}

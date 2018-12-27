@@ -4,7 +4,7 @@
 #include <NTL/ZZ_pX.h>
 
 #include "YASHE/YASHE.hpp"
-#include "YASHE/ciphertext.hpp"
+#include "YASHE/cipherText.hpp"
 #include "YASHE/functions.hpp"
 
 YASHE_CT::YASHE_CT() {
